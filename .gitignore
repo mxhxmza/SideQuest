@@ -1,0 +1,27 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# data (re-generate with backend/scripts/import_osm.py)
+data/
+*.osm.pbf
+*.sqlite
+*.sqlite-journal
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# node
+node_modules/
+dist/
+.vercel/
+
+# editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
