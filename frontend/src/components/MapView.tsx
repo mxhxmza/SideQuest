@@ -4,16 +4,75 @@ import { useEffect, useRef } from "react";
 import type { Point, TripPlan } from "../types";
 import { addedMin, fmtTime, PRAYER_LABEL } from "../lib/format";
 
-const STYLE = "https://tiles.openfreemap.org/styles/liberty";
+const STYLE = "https://tiles.openfreemap.org/styles/fiord";
 const SG_CENTER: [number, number] = [103.8198, 1.3521];
 const LEG_COLORS: Record<string, string> = {
-  WALK: "#64748b",
-  BUS: "#16a34a",
-  SUBWAY: "#7c3aed",
-  RAIL: "#7c3aed",
-  TRAM: "#0891b2",
+  WALK: "#cbd5e1",
+  BUS: "#4ade80",
+  SUBWAY: "#c084fc",
+  RAIL: "#c084fc",
+  TRAM: "#22d3ee",
 };
-const ROUTE_COLOR = "#0a9b80";
+const ROUTE_COLOR = "#5eead4";
+const DRAW_MS = 2000;
+
+type LngLat = [number, number];
+interface Part {
+  f: Feature;
+  cum: number[];
+  start: number;
+  len: number;
+}
+
+/** metres-ish distance; only used to pace the draw animation */
+function dist(a: LngLat, b: LngLat): number {
+  const kx = 111_320 * Math.cos((a[1] * Math.PI) / 180);
+  return Math.hypot((b[0] - a[0]) * kx, (b[1] - a[1]) * 110_540);
+}
+
+function prepare(features: Feature[]): { parts: Part[]; total: number } {
+  let off = 0;
+  const parts = features.map((f) => {
+    const c = f.geometry.coordinates as LngLat[];
+    const cum = [0];
+    for (let i = 1; i < c.length; i++) cum.push(cum[i - 1] + dist(c[i - 1], c[i]));
+    const p = { f, cum, start: off, len: cum[cum.length - 1] };
+    off += p.len;
+    return p;
+  });
+  return { parts, total: off };
+}
+
+/** The route drawn up to distance d, plus the point at its head (the "player"). */
+function cut(parts: Part[], d: number): { features: Feature[]; head: LngLat | null } {
+  const out: Feature[] = [];
+  let head: LngLat | null = null;
+  for (const p of parts) {
+    if (d <= p.start && out.length) break;
+    const c = p.f.geometry.coordinates as LngLat[];
+    const local = d - p.start;
+    if (local >= p.len) {
+      out.push(p.f);
+      head = c[c.length - 1];
+      continue;
+    }
+    let i = 1;
+    while (i < c.length - 1 && p.cum[i] < local) i++;
+    const seg = p.cum[i] - p.cum[i - 1] || 1;
+    const t = Math.max(0, Math.min(1, (local - p.cum[i - 1]) / seg));
+    const pt: LngLat = [c[i - 1][0] + (c[i][0] - c[i - 1][0]) * t, c[i - 1][1] + (c[i][1] - c[i - 1][1]) * t];
+    const coords = [...c.slice(0, i), pt];
+    if (coords.length >= 2) out.push({ ...p.f, geometry: { ...p.f.geometry, coordinates: coords } });
+    head = pt;
+    break;
+  }
+  return { features: out, head };
+}
+
+const pointFC = (pt: LngLat | null): GeoJSON.FeatureCollection => ({
+  type: "FeatureCollection",
+  features: pt ? [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: pt } }] : [],
+});
 
 interface Props {
   plan: TripPlan | null;
@@ -71,20 +130,23 @@ export default function MapView({ plan, origin, destination, selectedStopId, onS
     );
     m.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     m.on("load", () => {
+      // small screens: start the attribution collapsed behind its (i) button
+      if (window.matchMedia("(max-width: 640px)").matches)
+        box.current?.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show");
       m.addSource("route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       m.addLayer({
         id: "route-glow",
         type: "line",
         source: "route",
         layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": ["get", "color"], "line-width": 16, "line-opacity": 0.18, "line-blur": 6 },
+        paint: { "line-color": ["get", "color"], "line-width": 18, "line-opacity": 0.35, "line-blur": 8 },
       });
       m.addLayer({
         id: "route-casing",
         type: "line",
         source: "route",
         layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "#ffffff", "line-width": 9 },
+        paint: { "line-color": "#050816", "line-width": 9, "line-opacity": 0.9 },
       });
       m.addLayer({
         id: "route-line",
@@ -101,6 +163,19 @@ export default function MapView({ plan, origin, destination, selectedStopId, onS
         filter: ["==", ["get", "mode"], "WALK"],
         layout: { "line-cap": "round", "line-join": "round" },
         paint: { "line-color": LEG_COLORS.WALK, "line-width": 4, "line-dasharray": [1, 1.6] },
+      });
+      m.addSource("player", { type: "geojson", data: pointFC(null) });
+      m.addLayer({
+        id: "player-halo",
+        type: "circle",
+        source: "player",
+        paint: { "circle-radius": 16, "circle-color": "#5eead4", "circle-opacity": 0.3, "circle-blur": 0.6 },
+      });
+      m.addLayer({
+        id: "player-dot",
+        type: "circle",
+        source: "player",
+        paint: { "circle-radius": 6.5, "circle-color": "#ffffff", "circle-stroke-width": 3, "circle-stroke-color": "#34cfae" },
       });
       ready.current = true;
       pending.current?.();
@@ -128,6 +203,8 @@ export default function MapView({ plan, origin, destination, selectedStopId, onS
       markers.current = [];
       if (anim.current) cancelAnimationFrame(anim.current);
       const src = m.getSource("route") as GeoJSONSource | undefined;
+      const player = m.getSource("player") as GeoJSONSource | undefined;
+      player?.setData(pointFC(null));
       const features: Feature[] = [];
       if (plan) {
         const legs = plan.route.legs.length
@@ -141,26 +218,18 @@ export default function MapView({ plan, origin, destination, selectedStopId, onS
           });
         }
       }
-      // draw the route on progressively (≈1.3 s)
-      const total = features.reduce((n, f) => n + f.geometry.coordinates.length, 0);
-      const frame = (k: number) => ({
-        type: "FeatureCollection" as const,
-        features: features
-          .map((f, i) => {
-            const before = features.slice(0, i).reduce((n, g) => n + g.geometry.coordinates.length, 0);
-            const take = Math.max(0, Math.min(f.geometry.coordinates.length, k - before));
-            return { ...f, geometry: { ...f.geometry, coordinates: f.geometry.coordinates.slice(0, take) } };
-          })
-          .filter((f) => f.geometry.coordinates.length >= 2),
-      });
+      // a glowing "player" runs the route from A to B, drawing it as it goes
+      const { parts, total } = prepare(features);
       if (!total || reducedMotion()) {
         src?.setData({ type: "FeatureCollection", features });
       } else {
         const start = performance.now();
         const step = (now: number) => {
-          const t = Math.min(1, (now - start) / 1300);
-          const eased = 1 - Math.pow(1 - t, 3);
-          src?.setData(frame(Math.ceil(eased * total)));
+          const t = Math.min(1, (now - start) / DRAW_MS);
+          const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+          const { features: drawn, head } = cut(parts, eased * total);
+          src?.setData({ type: "FeatureCollection", features: drawn });
+          player?.setData(pointFC(t < 1 ? head : null));
           if (t < 1) anim.current = requestAnimationFrame(step);
         };
         anim.current = requestAnimationFrame(step);
@@ -176,7 +245,7 @@ export default function MapView({ plan, origin, destination, selectedStopId, onS
         markers.current.push(new maplibregl.Marker({ element: wrap }).setLngLat([lng, lat]).addTo(m));
       };
       if (origin) add(origin.lng, origin.lat, el("pin pin-origin", "A", origin.name ?? "Start"));
-      if (destination) add(destination.lng, destination.lat, el("pin pin-dest", "B", destination.name ?? "End"));
+      if (destination) add(destination.lng, destination.lat, el("pin pin-dest", "🏁", destination.name ?? "Finish"));
       if (plan) {
         plan.prayer_times.forEach((p) => {
           if (!p.position || p.note) return;
@@ -191,8 +260,8 @@ export default function MapView({ plan, origin, destination, selectedStopId, onS
           const c = sp.chosen;
           if (!c) return;
           const node = el(
-            `pin pin-stop${seen.has(c.osm_id) ? " pin-offset" : ""}`,
-            String(i + 1),
+            `pin-stop${seen.has(c.osm_id) ? " pin-offset" : ""}`,
+            `<span class="hex">${i + 1}</span>`,
             `${sp.request.label}: ${c.name ?? "Unnamed"}`,
           );
           node.dataset.stop = sp.request.id;
@@ -247,8 +316,8 @@ export default function MapView({ plan, origin, destination, selectedStopId, onS
       const node = el("cand-pin", String(i + 1), `${c.name ?? "Unnamed"} · +${Math.round(addedMin(c))} min`);
       node.style.animationDelay = `${i * 70}ms`;
       const popup = new maplibregl.Popup({ offset: 14, closeButton: false }).setHTML(
-        `<div style="font:600 13px 'Plus Jakarta Sans',sans-serif">${esc(c.name ?? "Unnamed place")}</div>` +
-          `<div style="font:12px 'Plus Jakarta Sans',sans-serif;color:#475569">+${Math.round(addedMin(c))} min · ETA ${fmtTime(c.eta)}</div>`,
+        `<div style="font:600 13px 'Plus Jakarta Sans',sans-serif;color:#fff">${esc(c.name ?? "Unnamed place")}</div>` +
+          `<div style="font:12px 'Plus Jakarta Sans',sans-serif;color:#94a3b8">+${Math.round(addedMin(c))} min · ETA ${fmtTime(c.eta)}</div>`,
       );
       node.addEventListener("dblclick", () => onPickCandidate?.(sp.request.id, c.osm_id));
       const wrap = document.createElement("div");

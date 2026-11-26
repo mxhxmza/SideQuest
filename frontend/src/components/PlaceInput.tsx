@@ -101,17 +101,19 @@ export default function PlaceInput({ label, value, onChange, onText, placeholder
         {dot && (
           <span
             aria-hidden
-            className={`pointer-events-none absolute left-3 top-1/2 z-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-[9px] font-extrabold text-white shadow ${
-              dot === "origin" ? "bg-emerald-500" : "bg-rose-500"
+            className={`pointer-events-none absolute left-3 top-1/2 z-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full font-display text-[10px] font-bold text-white ${
+              dot === "origin"
+                ? "bg-emerald-500 shadow-[0_0_10px_rgba(52,211,153,0.8)]"
+                : "bg-rose-500 shadow-[0_0_10px_rgba(244,114,182,0.8)]"
             }`}
           >
-            {dot === "origin" ? "A" : "B"}
+            {dot === "origin" ? "A" : "🏁"}
           </span>
         )}
         {value && (
           <span
             aria-label="Place selected"
-            className={`pointer-events-none absolute top-1/2 z-10 -translate-y-1/2 animate-pop text-sm text-emerald-500 ${allowLocate ? "right-14" : "right-3"}`}
+            className={`pointer-events-none absolute top-1/2 z-10 -translate-y-1/2 animate-pop text-sm text-emerald-400 ${allowLocate ? "right-14" : "right-3"}`}
           >
             ✓
           </span>
@@ -158,27 +160,27 @@ export default function PlaceInput({ label, value, onChange, onText, placeholder
       </div>
       {busy && !value && (
         <span className={`pointer-events-none absolute top-1/2 -translate-y-1/2 ${allowLocate ? "right-14" : "right-3"}`}>
-          <span className="block h-3.5 w-3.5 animate-spin rounded-full border-2 border-brand-200 border-t-brand-500" />
+          <span className="block h-3.5 w-3.5 animate-spin rounded-full border-2 border-brand-400/30 border-t-brand-300" />
         </span>
       )}
-      {err && <p className="mt-1 animate-fade-up text-xs text-rose-600">{err}</p>}
+      {err && <p className="mt-1 animate-fade-up text-xs text-rose-400">{err}</p>}
       {open && results.length > 0 && (
         <ul
           id={`${id}-list`}
           role="listbox"
-          className="absolute z-30 mt-1.5 max-h-72 w-full animate-slide-down overflow-auto rounded-2xl border border-slate-200 bg-white p-1 shadow-xl"
+          className="absolute z-30 mt-1.5 max-h-72 w-full animate-slide-down overflow-auto rounded-2xl border border-white/10 bg-ink-850/95 p-1 shadow-2xl shadow-black/60 backdrop-blur-xl"
         >
           {results.map((r, i) => (
             <li
               key={`${r.lat},${r.lng},${i}`}
               role="option"
               aria-selected={i === active}
-              className={`cursor-pointer rounded-xl px-3 py-2 text-sm transition ${i === active ? "bg-brand-50" : ""}`}
+              className={`cursor-pointer rounded-xl px-3 py-2 text-sm transition ${i === active ? "bg-brand-400/15" : ""}`}
               onMouseDown={(e) => (e.preventDefault(), pick(r))}
               onMouseEnter={() => setActive(i)}
             >
-              <div className="font-medium text-slate-800">{r.name}</div>
-              {r.address && <div className="truncate text-xs text-slate-500">{r.address}</div>}
+              <div className="font-medium text-slate-100">{r.name}</div>
+              {r.address && <div className="truncate text-xs text-slate-400">{r.address}</div>}
             </li>
           ))}
         </ul>

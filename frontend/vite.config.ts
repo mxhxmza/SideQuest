@@ -11,13 +11,13 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["icon.svg"],
       manifest: {
-        name: "Route-aware Stop Planner",
-        short_name: "Stops",
+        name: "SideQuest · Route-aware Stop Planner",
+        short_name: "SideQuest",
         description: "Plan stops along your Singapore trip, ranked by extra minutes added.",
-        theme_color: "#0f766e",
-        background_color: "#ffffff",
+        theme_color: "#070b1a",
+        background_color: "#070b1a",
         display: "standalone",
-        start_url: "/",
+        start_url: "/plan",
         icons: [
           { src: "icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "icon-512.png", sizes: "512x512", type: "image/png" },

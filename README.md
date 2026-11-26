@@ -1,9 +1,14 @@
-# Route-aware Stop Planner (Singapore)
+# SideQuest — Route-aware Stop Planner (Singapore)
 
 Type your trip and the stops you want in plain words — *"halal lunch around 1pm, a mosque near Asr time,
 somewhere to buy a phone charger"* — and get a timeline where every stop's options are ranked by
 **extra minutes added to the trip**, with prayer times placed on the route, opening hours checked at
 your ETA, combined stops (same mall), and a one-tap hand-off to Google Maps.
+
+The web app has two pages: a landing page at `/` that explains what the app does and how it is built
+(architecture, the 10-stage planning pipeline, provider fallbacks, scoring rules), and the planner at
+`/plan`. The planner has a light game layer — stars per trip, XP and levels, 16 badges, optional sound
+effects — computed in the browser from the plan and stored in `localStorage` only (`frontend/src/lib/game.ts`).
 
 $0 stack, no card-gated services. Design: [docs/DESIGN.md](docs/DESIGN.md) · trade-offs: [docs/DECISIONS.md](docs/DECISIONS.md).
 

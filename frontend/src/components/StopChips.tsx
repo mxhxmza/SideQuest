@@ -44,23 +44,23 @@ export default function StopChips({ stops, categories, onChange }: Props) {
               key={s.id + s.category + s.query}
               type="button"
               onClick={() => setEditing(editing === s.id ? null : s.id)}
-              className={`chip animate-pop ${editing === s.id ? "border-brand-400 ring-4 ring-brand-100" : ""}`}
+              className={`chip animate-pop ${editing === s.id ? "border-brand-300 bg-brand-400/15 ring-4 ring-brand-400/20" : ""}`}
               style={{ animationDelay: `${i * 70}ms` }}
               title={s.query || undefined}
             >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-100 text-[10px] font-bold text-brand-700">
+              <span className="hex flex h-5 w-6 items-center justify-center bg-gradient-to-br from-brand-300 to-brand-600 font-display text-[10px] font-bold text-ink-950">
                 {i + 1}
               </span>
               <span aria-hidden>{c?.icon ?? s.icon}</span>
               {s.constraints.dietary.length > 0 && (
-                <span className="font-semibold capitalize text-emerald-700">{s.constraints.dietary.join("/")}</span>
+                <span className="font-semibold capitalize text-emerald-300">{s.constraints.dietary.join("/")}</span>
               )}
-              <span className="font-medium">{label}</span>
+              <span className="font-medium text-white">{label}</span>
               <span className="text-slate-400">· {fmtWindow(s.time_window)}</span>
             </button>
           );
         })}
-        <button type="button" onClick={add} className="chip border-dashed text-slate-500">
+        <button type="button" onClick={add} className="chip border-dashed text-slate-400">
           + Add
         </button>
       </div>
@@ -71,7 +71,7 @@ export default function StopChips({ stops, categories, onChange }: Props) {
           const c = catOf(s.category);
           const allowsDiet = DIET_KINDS.includes(c?.kind ?? "");
           return (
-            <div key={s.id} className="mt-3 animate-slide-down space-y-3 rounded-2xl border border-slate-200 bg-white p-3 text-sm shadow-sm">
+            <div key={s.id} className="mt-3 animate-slide-down space-y-3 rounded-2xl border border-white/10 bg-ink-900/80 p-3 text-sm shadow-xl shadow-black/30">
               <div className="grid grid-cols-2 gap-2">
                 <label className="col-span-2 sm:col-span-1">
                   <span className="lbl">What</span>
@@ -220,7 +220,7 @@ export default function StopChips({ stops, categories, onChange }: Props) {
                           })
                         }
                         className={`rounded-full px-3 py-1 text-xs font-semibold capitalize transition ${
-                          on ? "bg-emerald-600 text-white shadow" : "bg-slate-100 text-slate-600 hover:bg-emerald-50"
+                          on ? "bg-emerald-500 text-ink-950 shadow-[0_0_12px_rgba(16,185,129,0.5)]" : "bg-white/5 text-slate-300 ring-1 ring-white/10 hover:bg-emerald-500/15"
                         }`}
                       >
                         {on ? "✓ " : ""}
@@ -230,10 +230,10 @@ export default function StopChips({ stops, categories, onChange }: Props) {
                   })}
                 </div>
               )}
-              <label className="flex items-center gap-2 text-slate-600">
+              <label className="flex items-center gap-2 text-slate-300">
                 <input
                   type="checkbox"
-                  className="accent-brand-600"
+                  className="accent-brand-400"
                   checked={s.constraints.open_at_eta}
                   onChange={(e) => update(s.id, { constraints: { ...s.constraints, open_at_eta: e.target.checked } })}
                 />
@@ -242,7 +242,7 @@ export default function StopChips({ stops, categories, onChange }: Props) {
               <div className="flex justify-between">
                 <button
                   type="button"
-                  className="text-xs font-semibold text-rose-600 hover:underline"
+                  className="text-xs font-semibold text-rose-400 hover:underline"
                   onClick={() => {
                     onChange(stops.filter((x) => x.id !== s.id));
                     setEditing(null);
