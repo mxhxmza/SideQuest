@@ -1,0 +1,27 @@
+{"text": "halal lunch around 1pm, a mosque near Asr time, somewhere to buy a phone charger", "expected": [{"category": "meal", "dietary": ["halal"], "window": {"type": "clock_time", "value": "13:00"}}, {"category": "mosque", "window": {"type": "prayer", "value": "asr"}}, {"category": "charger", "window": {"type": "any"}}]}
+{"text": "coffee 45 min in", "expected": [{"category": "cafe", "window": {"type": "minutes_in", "value": 45}}]}
+{"text": "toilet after an hour", "expected": [{"category": "toilet", "window": {"type": "minutes_in", "value": 60}}]}
+{"text": "pray zohor somewhere", "expected": [{"category": "prayer_room", "window": {"type": "prayer", "value": "dhuhr"}}]}
+{"text": "vegetarian dinner at 7pm then petrol", "expected": [{"category": "meal", "dietary": ["vegetarian"], "window": {"type": "clock_time", "value": "19:00"}}, {"category": "petrol", "window": {"type": "any"}}]}
+{"text": "need an ATM and a pharmacy", "expected": [{"category": "atm", "window": {"type": "any"}}, {"category": "pharmacy", "window": {"type": "any"}}]}
+{"text": "surau before maghrib", "expected": [{"category": "prayer_room", "window": {"type": "prayer", "value": "maghrib"}}]}
+{"text": "grab groceries at FairPrice around 6:30pm", "expected": [{"category": "supermarket", "window": {"type": "clock_time", "value": "18:30"}}]}
+{"text": "halal breakfast", "expected": [{"category": "meal", "dietary": ["halal"], "window": {"type": "clock_time", "value": "08:30"}}]}
+{"text": "mosque for asar, then hawker centre for dinner", "expected": [{"category": "mosque", "window": {"type": "prayer", "value": "asr"}}, {"category": "hawker", "window": {"type": "clock_time", "value": "19:00"}}]}
+{"text": "power bank, toilet 30 minutes in", "expected": [{"category": "charger", "window": {"type": "any"}}, {"category": "toilet", "window": {"type": "minutes_in", "value": 30}}]}
+{"text": "isyak at a mosque", "expected": [{"category": "mosque", "window": {"type": "prayer", "value": "isha"}}]}
+{"text": "bubble tea around 3pm", "expected": [{"category": "cafe", "window": {"type": "clock_time", "value": "15:00"}}]}
+{"text": "charge my car halfway", "expected": [{"category": "ev_charging", "window": {"type": "any"}}]}
+{"text": "vegan food at 12:15", "expected": [{"category": "meal", "dietary": ["vegan"], "window": {"type": "clock_time", "value": "12:15"}}]}
+{"text": "buy flowers before 5pm", "expected": [{"category": "florist", "window": {"type": "clock_time", "value": "17:00"}}]}
+{"text": "7-eleven for drinks", "expected": [{"category": "convenience", "window": {"type": "any"}}]}
+{"text": "somewhere to pray at zuhur; halal lunch at noon", "expected": [{"category": "prayer_room", "window": {"type": "prayer", "value": "dhuhr"}}, {"category": "meal", "dietary": ["halal"], "window": {"type": "clock_time", "value": "12:00"}}]}
+{"text": "a park to stretch my legs after 2 hours", "expected": [{"category": "park", "window": {"type": "minutes_in", "value": 120}}]}
+{"text": "clinic at 10am", "expected": [{"category": "clinic", "window": {"type": "clock_time", "value": "10:00"}}]}
+{"text": "bookshop and a bakery", "expected": [{"category": "bookshop", "window": {"type": "any"}}, {"category": "bakery", "window": {"type": "any"}}]}
+{"text": "muslim-friendly supper at 10.30pm", "expected": [{"category": "meal", "dietary": ["halal"], "window": {"type": "clock_time", "value": "22:30"}}]}
+{"text": "subuh prayer room", "expected": [{"category": "prayer_room", "window": {"type": "prayer", "value": "fajr"}}]}
+{"text": "electronics shop for a usb cable, then mall", "expected": [{"category": "charger", "window": {"type": "any"}}, {"category": "mall", "window": {"type": "any"}}]}
+{"text": "mosque to pray asr, some halal shop to buy ice cream along the way", "expected": [{"category": "mosque", "window": {"type": "prayer", "value": "asr"}}, {"category": "ice_cream", "dietary": ["halal"], "window": {"type": "any"}}]}
+{"text": "something sweet after an hour", "expected": [{"category": "ice_cream", "window": {"type": "minutes_in", "value": 60}}]}
+{"text": "buy durian on the way", "expected": [{"category": "keyword", "window": {"type": "any"}}]}

@@ -1,0 +1,180 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --color-brand-50: #ecfdf8;
+  --color-brand-100: #d1faee;
+  --color-brand-200: #a6f2dd;
+  --color-brand-300: #6de4c8;
+  --color-brand-400: #34cfae;
+  --color-brand-500: #12b595;
+  --color-brand-600: #08927a;
+  --color-brand-700: #0a7564;
+  --color-brand-800: #0d5d51;
+  --color-brand-900: #0e4c43;
+
+  --animate-fade-up: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-pop: pop 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-slide-down: slide-down 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-shimmer: shimmer 2.2s linear infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-ping-slow: ping-slow 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  --animate-gradient: gradient-pan 6s ease infinite;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pop {
+    0% { opacity: 0; transform: scale(0.6); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes slide-down {
+    from { opacity: 0; transform: translateY(-8px); clip-path: inset(0 0 100% 0); }
+    to { opacity: 1; transform: translateY(0); clip-path: inset(0 0 0 0); }
+  }
+  @keyframes shimmer {
+    from { background-position: -200% 0; }
+    to { background-position: 200% 0; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  @keyframes ping-slow {
+    0% { transform: scale(1); opacity: 0.55; }
+    80%, 100% { transform: scale(2.4); opacity: 0; }
+  }
+  @keyframes gradient-pan {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+}
+
+@layer components {
+  .input {
+    @apply w-full rounded-xl border border-slate-200 bg-white/80 px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100;
+  }
+  .lbl {
+    @apply mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-500;
+  }
+  .btn-primary {
+    @apply relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-r from-brand-600 via-brand-500 to-cyan-500 bg-[length:200%_100%] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-brand-500/30 transition duration-300 hover:-translate-y-0.5 hover:bg-right hover:shadow-xl hover:shadow-brand-500/40 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0;
+  }
+  .btn-ghost {
+    @apply rounded-xl border border-slate-200 bg-white text-sm text-slate-700 transition hover:border-brand-300 hover:bg-brand-50 disabled:opacity-50;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[13px] text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold;
+  }
+  .card {
+    @apply rounded-2xl border border-slate-200/70 bg-white shadow-sm;
+  }
+  .glass {
+    @apply bg-white/85 backdrop-blur-xl;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  @apply bg-slate-100 font-sans text-slate-900 antialiased;
+}
+
+/* shine sweep on the primary button */
+.btn-primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
+  transform: translateX(-120%);
+  transition: transform 0.8s ease;
+}
+.btn-primary:hover::after {
+  transform: translateX(120%);
+}
+
+/* animated gradient ring around the prompt box when focused */
+.prompt-ring {
+  background: linear-gradient(120deg, #12b595, #22d3ee, #a78bfa, #12b595);
+  background-size: 300% 300%;
+  animation: gradient-pan 6s ease infinite;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #eef2f6 25%, #f8fafc 50%, #eef2f6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+/* map markers */
+.pin {
+  @apply flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-[3px] border-white text-xs font-extrabold text-white shadow-lg;
+  animation: pin-drop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.pin-origin {
+  @apply bg-gradient-to-br from-emerald-400 to-emerald-600;
+}
+.pin-dest {
+  @apply bg-gradient-to-br from-rose-400 to-rose-600;
+}
+.pin-stop {
+  @apply bg-gradient-to-br from-brand-500 to-brand-700;
+}
+.pin-selected {
+  /* size, not transform: the drop-in animation owns transform */
+  @apply h-10 w-10 from-amber-400 to-orange-500 text-sm;
+  box-shadow: 0 0 0 6px rgba(251, 191, 36, 0.35), 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+.pin-offset {
+  margin: -10px 0 0 10px;
+}
+.prayer-pin {
+  @apply relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-amber-300 bg-amber-50 text-sm shadow-md;
+  animation: pin-drop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.prayer-pin::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 9999px;
+  border: 2px solid #fbbf24;
+  animation: ping-slow 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.cand-pin {
+  @apply flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border-2 border-white bg-slate-600 text-[10px] font-bold text-white shadow-md;
+  animation: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes pin-drop {
+  0% { opacity: 0; transform: translateY(-28px) scale(0.6); }
+  60% { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.maplibregl-ctrl-attrib {
+  font-size: 10px;
+}
+.maplibregl-ctrl-group {
+  @apply !rounded-xl !shadow-lg;
+}
+
+/* thin, quiet scrollbars in the panel */
+.scroll-soft {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

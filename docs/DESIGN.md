@@ -1,6 +1,7 @@
 # Route-aware Stop Planner — Design
 
-Status: Milestone 0 (plan). Region: Singapore. Budget: $0. No card-gated services.
+Status: implemented end to end (M1–M6 functionality; M7 deploy config written, not yet deployed). Region: Singapore. Budget: $0. No card-gated services.
+Later changes to this plan are recorded in DECISIONS.md D11–D14 (keyless fallbacks, two extra scoring terms, matrix-based exact detours, shrine exclusion).
 
 ## 1. What it does
 
@@ -117,10 +118,10 @@ TripPlan      route: {geometry, duration_s, distance_m, mode, provider},
 |---|---|---|
 | `minutes_in` | depart + value | "45 min in" |
 | `clock_time` | value on trip date | "around 1pm" |
-| `prayer` | prayer start (computed at the route position at that time) | "at Asr" |
+| `prayer` | prayer start (computed at the route position at that time) | "at Asr", "Asr anytime until 6pm" |
 | `any` | whole route | "somewhere to buy a charger" |
 
-Segment = route portion between `target − tolerance` and `target + tolerance`, clipped to [0, duration]. Default tolerance is ±20 min, or prayer start → +60 min for prayer windows. A target outside the trip produces a warning and is clamped to the start or end of the route.
+Segment = route portion between `target − tolerance` and `target + tolerance`, clipped to [0, duration]. Default tolerance is ±20 min, or prayer start → +60 min for prayer windows (prayer start → `until` when given, capped at the prayer's end). The segment starts one **lead** earlier — the one-way time to a place at the buffer's edge (~13 min on foot for transit/walk, ~5 min driving) — because the window applies to *arriving at the place*, not to leaving the route (D19). A prayer can't be prayed before it starts: arriving early means waiting, and the wait counts as minutes added. A target outside the trip produces a warning and is clamped to the start or end of the route.
 
 ### 5.3 Query → OSM filters
 `core/tags.py` holds a dictionary: category key → OSM filters + name keywords + default dwell. Examples:
@@ -178,7 +179,7 @@ Stops are processed in order of target time. After the top choice for stop *k* i
 1. Compute today's times at the origin. In Singapore they differ by about 2 minutes across the island, so origin times are fine for now. A per-position recompute is kept for future regions.
 2. Every prayer whose start falls between departure and (adjusted) arrival goes into `prayer_times`. Prayers whose window is already open at departure are listed with the note "window open now".
 3. `position_at(prayer_time)` gives where the user will be.
-4. If the user asked for a prayer stop, that stop's segment is [prayer start, +60 min]. Otherwise the timeline shows the prayer as an **info row** with a "suggest mosques here" button that adds a `prayer` StopRequest.
+4. If the user asked for a prayer stop, that stop's window is [prayer start, +60 min] (or until the time they gave), searched from one lead earlier on the route (§5.2). Otherwise the timeline shows the prayer as an **info row** with a "suggest mosques here" button that adds a `prayer` StopRequest.
 5. Mosques come from OSM, which covers Singapore's ~70 mosques well. Prayer rooms (surau/musolla in malls) are poorly covered (see §9).
 
 ### 5.10 Opening hours

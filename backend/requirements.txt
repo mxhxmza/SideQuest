@@ -1,0 +1,10 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.7
+pydantic-settings>=2.3
+httpx>=0.27
+adhanpy==1.0.5
+opening-hours-py>=1.1
+tzdata
+numpy>=1.26
+shapely>=2.0

@@ -1,0 +1,22 @@
+# Render Blueprint (free web service, Docker). Secrets are set in the dashboard.
+services:
+  - type: web
+    name: stop-planner-api
+    runtime: docker
+    plan: free
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: REGION
+        value: singapore
+      - key: LLM_BACKEND
+        value: rules
+      - key: CORS_ORIGINS
+        sync: false
+      - key: ONEMAP_EMAIL
+        sync: false
+      - key: ONEMAP_PASSWORD
+        sync: false
+      - key: ORS_API_KEY
+        sync: false
