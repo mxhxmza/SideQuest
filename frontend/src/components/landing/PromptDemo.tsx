@@ -1,27 +1,41 @@
 import { useEffect, useState } from "react";
 
 /** Real outputs of the rules parser for these sentences (checked against /api/parse). */
-const SCRIPTS = [
+const SCRIPTS: { text: string; chips: { icon: string; label: string; diet?: string; cuisine?: string; when: string }[] }[] = [
   {
-    text: "mosque to pray asr, halal ice cream along the way",
+    text: "church before 10am, then Italian dinner",
     chips: [
-      { icon: "🕌", label: "Mosque", diet: "", when: "@Asar" },
-      { icon: "🍨", label: "Ice cream / dessert", diet: "halal", when: "any time" },
+      { icon: "⛪", label: "Church", when: "before 10:00" },
+      { icon: "🍽", label: "Meal", cuisine: "Italian", when: "~19:00" },
+    ],
+  },
+  {
+    text: "Hindu temple, then a vegetarian lunch",
+    chips: [
+      { icon: "🛕", label: "Hindu temple", when: "any time" },
+      { icon: "🍽", label: "Meal", diet: "vegetarian", when: "~12:30" },
+    ],
+  },
+  {
+    text: "Buddhist temple and Japanese food around 1pm",
+    chips: [
+      { icon: "☸️", label: "Buddhist temple", when: "any time" },
+      { icon: "🍽", label: "Meal", cuisine: "Japanese", when: "~13:00" },
+    ],
+  },
+  {
+    text: "mosque at Asr, then a halal restaurant",
+    chips: [
+      { icon: "🕌", label: "Mosque", when: "@Asar" },
+      { icon: "🍽", label: "Meal", diet: "halal", when: "any time" },
     ],
   },
   {
     text: "coffee 45 min in, then petrol and a toilet",
     chips: [
-      { icon: "☕", label: "Café / coffee", diet: "", when: "45 min in" },
-      { icon: "⛽", label: "Petrol station", diet: "", when: "any time" },
-      { icon: "🚻", label: "Toilet", diet: "", when: "any time" },
-    ],
-  },
-  {
-    text: "vegetarian dinner at 7pm and a pharmacy",
-    chips: [
-      { icon: "🍽", label: "Meal", diet: "vegetarian", when: "~19:00" },
-      { icon: "💊", label: "Pharmacy", diet: "", when: "any time" },
+      { icon: "☕", label: "Café / coffee", when: "45 min in" },
+      { icon: "⛽", label: "Petrol station", when: "any time" },
+      { icon: "🚻", label: "Toilet", when: "any time" },
     ],
   },
 ];
@@ -90,6 +104,7 @@ export default function PromptDemo({ active }: { active: boolean }) {
                 </span>
                 <span aria-hidden>{c.icon}</span>
                 {c.diet && <span className="font-semibold capitalize text-emerald-300">{c.diet}</span>}
+                {c.cuisine && <span className="font-semibold text-orange-300">{c.cuisine}</span>}
                 <span className="font-medium text-white">{c.label}</span>
                 <span className="text-slate-400">· {c.when}</span>
               </span>

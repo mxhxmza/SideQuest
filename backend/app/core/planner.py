@@ -18,7 +18,7 @@ from app.core import tags as T
 from app.core.detour import (estimate_detour_min, exact_detour_min, exact_transit_detour_min,
                              neighbour_distance_m, transit_detour_min)
 from app.core.geo import Projection
-from app.core.scoring import category_evidence, dedupe, dietary_evidence, score
+from app.core.scoring import category_evidence, cuisine_evidence, dedupe, dietary_evidence, score
 from app.core.segments import Clock, Window, resolve_window, window_to_route_range
 from app.core.timeline import Timeline
 from app.models import (EtaWindow, Evidence, LegLink, OsmFilter, ParentRef, Place, PlaceCandidate, Point,
@@ -61,6 +61,8 @@ def normalize_stop(s: StopRequest) -> StopRequest:
     if s.constraints.dietary and cat.kind not in T.DIETARY_KINDS:
         # dietary only makes sense for food; ignore elsewhere rather than exclude everything
         s.constraints.dietary = []
+    if s.constraints.cuisine and cat.kind not in T.CUISINE_KINDS:
+        s.constraints.cuisine = []
     return s
 
 
@@ -173,6 +175,7 @@ class Planner:
         kept: list[tuple[Place, list[Evidence], bool, bool]] = []
         unverified: list[tuple[Place, list[Evidence], bool, bool]] = []
         diet = list(stop.constraints.dietary)
+        cuisines = list(stop.constraints.cuisine)
         for p in places:
             tags = dict(p.tags)
             if p.name:
@@ -181,6 +184,11 @@ class Planner:
             if not ok:
                 continue
             weak_cat = all(e.strength == "weak" for e in cev)
+            cok, cuev, cweak = cuisine_evidence(tags, cuisines)
+            if not cok:
+                continue  # wrong cuisine: excluded, like a wrong category
+            cev = cev + cuev
+            weak_cat = weak_cat or cweak  # cuisine known only from the name: "matched by name only"
             dok, dev, weak = dietary_evidence(tags, diet)
             if not dok:
                 if not dev:  # no evidence either way (an explicit "no" is never shown)
@@ -379,10 +387,13 @@ class Planner:
             ok, cev = category_evidence(cat, tags, other.name_keywords)
             if not ok:
                 return None
+            cok, cuev, _ = cuisine_evidence(tags, list(other.constraints.cuisine))
+            if not cok:
+                return None
             dok, dev, _ = dietary_evidence(tags, list(other.constraints.dietary))
             if not dok:
                 return None
-            return cev + dev
+            return cev + cuev + dev
 
         ev = match(place)
         if ev is not None:
@@ -560,7 +571,9 @@ class Planner:
             if chosen is not None and chosen not in top_list:
                 top_list = [chosen] + top_list[:TOP_N - 1]
             if not cands:
-                swarn.append("No matching places found along this part of the route")
+                what = "/".join(T.CUISINES[c].label for c in s.constraints.cuisine if c in T.CUISINES)
+                swarn.append(f"No {what} places found along this part of the route" if what
+                             else "No matching places found along this part of the route")
 
             added = 0.0
             if chosen is not None:
@@ -688,8 +701,9 @@ class Planner:
         if p.name:
             tags.setdefault("name", p.name)
         _, cev = category_evidence(T.get(s.category), tags, s.name_keywords)
+        _, cuev, _ = cuisine_evidence(tags, list(s.constraints.cuisine))
         _, dev, weak = dietary_evidence(tags, list(s.constraints.dietary))
-        r = _Raw(p, n.dist_m, n.along_t, n.along_m, det, evidence=cev + dev, weak_diet=weak)
+        r = _Raw(p, n.dist_m, n.along_t, n.along_m, det, evidence=cev + cuev + dev, weak_diet=weak)
         return self._to_candidate(s, r, clock, win), r
 
     def _prayers_on_route(self, req: TripRequest, tl: Timeline, clock: Clock, depart: datetime,

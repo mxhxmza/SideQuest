@@ -6,11 +6,12 @@ from typing import Literal, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.core.tags import CATEGORY_KEYS, DIETARY_KEYS
+from app.core.tags import CATEGORY_KEYS, CUISINE_KEYS, DIETARY_KEYS
 
 Mode = Literal["drive", "walk", "cycle", "transit"]
 Category = Literal[CATEGORY_KEYS]  # type: ignore[valid-type]
 Dietary = Literal[DIETARY_KEYS]  # type: ignore[valid-type]
+Cuisine = Literal[CUISINE_KEYS]  # type: ignore[valid-type]
 WindowType = Literal["minutes_in", "clock_time", "prayer", "any"]
 PrayerName = Literal["fajr", "dhuhr", "asr", "maghrib", "isha"]
 OpenState = Union[bool, Literal["unknown"]]
@@ -41,6 +42,8 @@ class TimeWindow(BaseModel):
 class StopConstraints(BaseModel):
     open_at_eta: bool = True
     dietary: list[Dietary] = Field(default_factory=list)
+    # food stops only: any of these cuisines ("Italian dinner"); empty = any cuisine
+    cuisine: list[Cuisine] = Field(default_factory=list)
 
 
 class StopRequest(BaseModel):

@@ -1,19 +1,22 @@
 import { useState } from "react";
-import type { Category, StopRequest, TimeWindow } from "../types";
+import type { Category, Cuisine, StopRequest, TimeWindow } from "../types";
 import { fmtWindow, PRAYER_LABEL } from "../lib/format";
 
 interface Props {
   stops: StopRequest[];
   categories: Category[];
+  cuisines: Cuisine[];
   onChange: (stops: StopRequest[]) => void;
 }
 
 const DIETS = ["halal", "vegetarian", "vegan"];
 const DIET_KINDS = ["meal", "search"];
+const CUISINE_KINDS = ["meal"];
 
-export default function StopChips({ stops, categories, onChange }: Props) {
+export default function StopChips({ stops, categories, cuisines, onChange }: Props) {
   const [editing, setEditing] = useState<string | null>(null);
   const catOf = (k: string) => categories.find((c) => c.key === k);
+  const cuisineLabel = (k: string) => cuisines.find((c) => c.key === k)?.label ?? k.replace(/_/g, " ");
 
   const update = (id: string, patch: Partial<StopRequest>) =>
     onChange(stops.map((s) => (s.id === id ? { ...s, ...patch } : s)));
@@ -55,6 +58,9 @@ export default function StopChips({ stops, categories, onChange }: Props) {
               {s.constraints.dietary.length > 0 && (
                 <span className="font-semibold capitalize text-emerald-300">{s.constraints.dietary.join("/")}</span>
               )}
+              {(s.constraints.cuisine ?? []).length > 0 && (
+                <span className="font-semibold capitalize text-orange-300">{s.constraints.cuisine!.map(cuisineLabel).join("/")}</span>
+              )}
               <span className="font-medium text-white">{label}</span>
               <span className="text-slate-400">· {fmtWindow(s.time_window)}</span>
             </button>
@@ -88,6 +94,7 @@ export default function StopChips({ stops, categories, onChange }: Props) {
                         constraints: {
                           ...s.constraints,
                           dietary: DIET_KINDS.includes(nc?.kind ?? "") ? s.constraints.dietary : [],
+                          cuisine: CUISINE_KINDS.includes(nc?.kind ?? "") ? s.constraints.cuisine : [],
                         },
                       });
                     }}
@@ -121,6 +128,24 @@ export default function StopChips({ stops, categories, onChange }: Props) {
                     placeholder="e.g. durian"
                     onChange={(e) => update(s.id, { name_keywords: [e.target.value], label: e.target.value })}
                   />
+                </label>
+              )}
+
+              {CUISINE_KINDS.includes(c?.kind ?? "") && cuisines.length > 0 && (
+                <label className="block">
+                  <span className="lbl">Cuisine</span>
+                  <select
+                    className="input"
+                    value={(s.constraints.cuisine ?? [])[0] ?? ""}
+                    onChange={(e) => update(s.id, { constraints: { ...s.constraints, cuisine: e.target.value ? [e.target.value] : [] } })}
+                  >
+                    <option value="">Any cuisine</option>
+                    {cuisines.map((k) => (
+                      <option key={k.key} value={k.key}>
+                        {k.label}
+                      </option>
+                    ))}
+                  </select>
                 </label>
               )}
 

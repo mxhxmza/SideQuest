@@ -63,7 +63,7 @@ describe("scoreRun", () => {
     const p = plan([stop("s1", "mosque", cand("m"), {}, true), stop("s2", "ice_cream", cand("i", { detour_min: 5 }))], 8);
     const r = scoreRun(p);
     expect(r.stars).toBe(3);
-    expect(r.lines.map((l) => l.label)).toContain("Prayer on time ×1");
+    expect(r.lines.map((l) => l.label)).toContain("On-time stops ×1");
     // 50 route + 50 found + 20 prayer + 22 efficiency + 30 stars
     expect(r.xp).toBe(172);
   });
@@ -102,7 +102,8 @@ describe("applyRun", () => {
     const p = plan([stop("s1", "mosque", cand("m"), {}, true), stop("s2", "ice_cream", cand("i", { detour_min: 0.5 }))], 3.5);
     const first = applyRun(EMPTY_STATS, p, "drive", new Date("2026-11-26T08:00:00Z"));
     const ids = first.newBadges.map((b) => b.id);
-    expect(ids).toEqual(expect.arrayContaining(["first", "prayer", "sweet", "foodie", "bullseye", "perfect", "longhaul"]));
+    expect(ids).toEqual(expect.arrayContaining(["first", "faith", "sweet", "foodie", "bullseye", "perfect", "longhaul"]));
+    expect(ids).not.toContain("world");
     expect(ids).not.toContain("rail");
     expect(first.after.trips).toBe(1);
     expect(first.after.cleared).toBe(2);

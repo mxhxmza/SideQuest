@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { PlaceCandidate, TripPlan } from "../types";
 import { addedMin, fmtAdded, fmtTime, PRAYER_LABEL } from "../lib/format";
+import { WORSHIP } from "../lib/game";
 
 interface Props {
   plan: TripPlan;
@@ -8,6 +9,10 @@ interface Props {
   onSelectStop: (id: string | null) => void;
   onSuggestMosque: (prayer: string) => void;
   renderDetail: (stopId: string) => ReactNode;
+  /** show Islamic prayer times along the route (rows + "add a mosque") */
+  showPrayers: boolean;
+  /** offered when the route has prayer times: switch them on/off */
+  onTogglePrayers?: () => void;
 }
 
 export function OpenBadge({ state }: { state: PlaceCandidate["open_at_eta"] }) {
@@ -18,7 +23,7 @@ export function OpenBadge({ state }: { state: PlaceCandidate["open_at_eta"] }) {
 
 const KIND_STYLE: Record<string, string> = {
   meal: "from-orange-300 to-rose-500",
-  prayer: "from-amber-200 to-orange-500",
+  worship: "from-amber-200 to-orange-500",
   search: "from-violet-300 to-fuchsia-500",
   default: "from-brand-300 to-cyan-500",
 };
@@ -26,15 +31,17 @@ const KIND_STYLE: Record<string, string> = {
 function gradFor(category: string): string {
   if (category === "keyword") return KIND_STYLE.search;
   if (["meal", "hawker", "cafe", "ice_cream", "bakery"].includes(category)) return KIND_STYLE.meal;
-  if (["mosque", "prayer_room"].includes(category)) return KIND_STYLE.prayer;
+  if (WORSHIP.has(category)) return KIND_STYLE.worship;
   return KIND_STYLE.default;
 }
 
 /** The trip as a level path: start, checkpoints (stops), prayer times, finish. */
-export default function Timeline({ plan, selectedStopId, onSelectStop, onSuggestMosque, renderDetail }: Props) {
+export default function Timeline({ plan, selectedStopId, onSelectStop, onSuggestMosque, renderDetail, showPrayers, onTogglePrayers }: Props) {
   const stopIndex = new Map(plan.stops.map((s, i) => [s.request.id, i]));
   const missing = plan.stops.filter((s) => !s.chosen);
   const checkpoints = plan.timeline.filter((r) => r.kind === "stop").length;
+  const rows = plan.timeline.filter((r) => r.kind !== "prayer" || showPrayers);
+  const hasPrayers = plan.timeline.some((r) => r.kind === "prayer");
   return (
     <section aria-label="Quest log">
       <h3 className="mb-2 flex items-center gap-2 font-display text-[13px] font-semibold uppercase tracking-[0.16em] text-slate-300">
@@ -42,6 +49,19 @@ export default function Timeline({ plan, selectedStopId, onSelectStop, onSuggest
         <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] tracking-wider text-slate-400 ring-1 ring-white/10">
           {checkpoints} checkpoint{checkpoints === 1 ? "" : "s"}
         </span>
+        {hasPrayers && onTogglePrayers && (
+          <button
+            type="button"
+            onClick={onTogglePrayers}
+            aria-pressed={showPrayers}
+            title="Show the five daily Muslim prayer times along your route"
+            className={`ml-auto rounded-full px-2.5 py-0.5 font-sans text-[10px] font-semibold normal-case tracking-normal ring-1 transition ${
+              showPrayers ? "bg-amber-300/15 text-amber-200 ring-amber-300/40" : "bg-white/5 text-slate-400 ring-white/10 hover:text-slate-200"
+            }`}
+          >
+            🕌 Prayer times {showPrayers ? "on" : "off"}
+          </button>
+        )}
       </h3>
       <div className="relative">
         {/* the path */}
@@ -50,7 +70,7 @@ export default function Timeline({ plan, selectedStopId, onSelectStop, onSuggest
           className="absolute bottom-6 left-[73px] top-6 w-1 -translate-x-[1px] rounded-full bg-gradient-to-b from-emerald-400 via-brand-300 to-rose-400 opacity-80 shadow-[0_0_12px_rgba(52,207,174,0.6)]"
         />
         <ol className="relative space-y-1.5">
-          {plan.timeline.map((row, k) => {
+          {rows.map((row, k) => {
             const delay = { animationDelay: `${80 + k * 70}ms` };
             const time = <span className="w-12 shrink-0 pt-1 text-right font-mono text-[13px] font-semibold text-slate-400">{fmtTime(row.time)}</span>;
             if (row.kind === "depart" || row.kind === "arrive") {
@@ -124,6 +144,9 @@ export default function Timeline({ plan, selectedStopId, onSelectStop, onSuggest
                     <div className="text-xs font-medium text-slate-400">
                       {sp.request.icon} {sp.request.label}
                       {sp.request.constraints.dietary.length > 0 && <span className="capitalize text-emerald-300"> · {sp.request.constraints.dietary.join("/")}</span>}
+                      {(sp.request.constraints.cuisine ?? []).length > 0 && (
+                        <span className="capitalize text-orange-300"> · {sp.request.constraints.cuisine!.join("/").replace(/_/g, " ")}</span>
+                      )}
                     </div>
                     <div className="truncate font-bold text-white">
                       {c.name ?? "Unnamed place"}

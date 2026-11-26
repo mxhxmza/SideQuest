@@ -3,9 +3,9 @@ import { useLayoutEffect, useRef, useState } from "react";
 const ROUTE = "M70 350 C 150 335, 120 255, 205 245 S 305 280, 330 195 S 400 95, 455 75";
 
 const CHECKPOINTS = [
-  { at: 0.3, icon: "🕌", label: "Masjid", cost: "+3 min", grad: ["#fde68a", "#f59e0b"], side: -1 },
-  { at: 0.58, icon: "🍨", label: "Halal ice cream", cost: "+5 min", grad: ["#fdba74", "#f43f5e"], side: 1 },
-  { at: 0.8, icon: "⛽", label: "Petrol", cost: "COMBO +0", grad: ["#c4b5fd", "#a21caf"], side: -1 },
+  { at: 0.3, icon: "⛪", label: "Church", cost: "+3 min", grad: ["#fde68a", "#f59e0b"], side: -1 },
+  { at: 0.58, icon: "🍝", label: "Italian dinner", cost: "+5 min", grad: ["#fdba74", "#f43f5e"], side: 1 },
+  { at: 0.8, icon: "💊", label: "Pharmacy", cost: "COMBO +0", grad: ["#c4b5fd", "#a21caf"], side: -1 },
 ];
 
 type Pt = { x: number; y: number };
@@ -15,7 +15,7 @@ const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(pre
 export default function HeroMap() {
   const path = useRef<SVGPathElement>(null);
   const [pts, setPts] = useState<Pt[]>([]);
-  const [prayer, setPrayer] = useState<Pt | null>(null);
+  const [marker, setMarker] = useState<Pt | null>(null);
   const motion = !reduced();
 
   useLayoutEffect(() => {
@@ -23,7 +23,7 @@ export default function HeroMap() {
     if (!p) return;
     const L = p.getTotalLength();
     setPts(CHECKPOINTS.map((c) => p.getPointAtLength(L * c.at)));
-    setPrayer(p.getPointAtLength(L * 0.22));
+    setMarker(p.getPointAtLength(L * 0.22));
   }, []);
 
   return (
@@ -82,21 +82,21 @@ export default function HeroMap() {
         {motion && <animate attributeName="stroke-dashoffset" from="28" to="0" dur="1s" repeatCount="indefinite" />}
       </path>
 
-      {/* prayer-time marker: where you'll be when Asar begins */}
-      {prayer && (
-        <g transform={`translate(${prayer.x} ${prayer.y})`}>
+      {/* time-window marker: where you'll be when the dinner window opens */}
+      {marker && (
+        <g transform={`translate(${marker.x} ${marker.y})`}>
           <circle r="15" fill="none" stroke="#fbbf24" strokeWidth="2" opacity="0.6">
             {motion && <animate attributeName="r" values="12;26" dur="2.2s" repeatCount="indefinite" />}
             {motion && <animate attributeName="opacity" values="0.7;0" dur="2.2s" repeatCount="indefinite" />}
           </circle>
           <circle r="12" fill="#1f1606" stroke="#fcd34d" strokeWidth="2" />
           <text y="4.5" textAnchor="middle" fontSize="12">
-            🕌
+            ⏰
           </text>
           <g transform="translate(18 4)">
-            <rect width="96" height="24" rx="12" fill="rgba(31,22,6,0.9)" stroke="rgba(251,191,36,0.55)" />
-            <text x="48" y="16" textAnchor="middle" fontSize="11" fontWeight="700" fill="#fde68a" fontFamily="Fredoka, sans-serif">
-              Asar 16:16
+            <rect width="118" height="24" rx="12" fill="rgba(31,22,6,0.9)" stroke="rgba(251,191,36,0.55)" />
+            <text x="59" y="16" textAnchor="middle" fontSize="11" fontWeight="700" fill="#fde68a" fontFamily="Fredoka, sans-serif">
+              Dinner from 18:30
             </text>
           </g>
         </g>

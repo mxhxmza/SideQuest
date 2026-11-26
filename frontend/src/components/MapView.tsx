@@ -83,6 +83,8 @@ interface Props {
   onPickCandidate?: (stopId: string, osmId: string) => void;
   /** px of map covered by the floating panel on the left (desktop) */
   padLeft?: number;
+  /** Islamic prayer-time markers along the route */
+  showPrayers?: boolean;
 }
 
 type Feature = GeoJSON.Feature<GeoJSON.LineString, { mode: string; color: string }>;
@@ -101,13 +103,23 @@ function esc(s: string): string {
 
 const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-export default function MapView({ plan, origin, destination, selectedStopId, onSelectStop, onPickCandidate, padLeft = 0 }: Props) {
+export default function MapView({
+  plan,
+  origin,
+  destination,
+  selectedStopId,
+  onSelectStop,
+  onPickCandidate,
+  padLeft = 0,
+  showPrayers = false,
+}: Props) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const ready = useRef(false);
   const pending = useRef<(() => void) | null>(null);
   const markers = useRef<maplibregl.Marker[]>([]);
   const candMarkers = useRef<maplibregl.Marker[]>([]);
+  const prayerMarkers = useRef<maplibregl.Marker[]>([]);
   const anim = useRef<number | null>(null);
 
   // init
@@ -247,14 +259,6 @@ export default function MapView({ plan, origin, destination, selectedStopId, onS
       if (origin) add(origin.lng, origin.lat, el("pin pin-origin", "A", origin.name ?? "Start"));
       if (destination) add(destination.lng, destination.lat, el("pin pin-dest", "🏁", destination.name ?? "Finish"));
       if (plan) {
-        plan.prayer_times.forEach((p) => {
-          if (!p.position || p.note) return;
-          add(
-            p.position.lng,
-            p.position.lat,
-            el("prayer-pin", "🕌", `${PRAYER_LABEL[p.name] ?? p.name} begins ${fmtTime(p.time)} — you'll be about here`),
-          );
-        });
         const seen = new Set<string>();
         plan.stops.forEach((sp, i) => {
           const c = sp.chosen;
@@ -298,6 +302,22 @@ export default function MapView({ plan, origin, destination, selectedStopId, onS
     else pending.current = draw;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan, origin, destination, padLeft]);
+
+  // prayer-time markers: only when shown (a toggle in the quest log)
+  useEffect(() => {
+    const m = map.current;
+    prayerMarkers.current.forEach((mk) => mk.remove());
+    prayerMarkers.current = [];
+    if (!m || !plan || !showPrayers) return;
+    plan.prayer_times.forEach((p, i) => {
+      if (!p.position || p.note) return;
+      const node = el("prayer-pin", "🕌", `${PRAYER_LABEL[p.name] ?? p.name} begins ${fmtTime(p.time)} — you'll be about here`);
+      node.style.animationDelay = `${400 + i * 120}ms`;
+      const wrap = document.createElement("div");
+      wrap.appendChild(node);
+      prayerMarkers.current.push(new maplibregl.Marker({ element: wrap }).setLngLat([p.position.lng, p.position.lat]).addTo(m));
+    });
+  }, [plan, showPrayers]);
 
   // selected stop: highlight + show alternatives
   useEffect(() => {

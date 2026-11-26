@@ -1,13 +1,19 @@
 # SideQuest — Route-aware Stop Planner (Singapore)
 
-Type your trip and the stops you want in plain words — *"halal lunch around 1pm, a mosque near Asr time,
-somewhere to buy a phone charger"* — and get a timeline where every stop's options are ranked by
-**extra minutes added to the trip**, with prayer times placed on the route, opening hours checked at
-your ETA, combined stops (same mall), and a one-tap hand-off to Google Maps.
+Type your trip and the stops you want in plain words — *"church before 10am, then Italian dinner and petrol"*,
+*"Hindu temple and a vegetarian lunch"*, *"mosque at Asr, then a halal restaurant"* — and get a timeline where every
+stop's options are ranked by **extra minutes added to the trip**, with opening hours checked at your ETA, combined
+stops (same mall), and a one-tap hand-off to Google Maps.
+
+It understands 28 place types — places of worship for every faith mapped in Singapore (church, Buddhist, Hindu and
+Taoist temples, gurdwara, synagogue, mosque, surau), food, errands — plus 16 cuisines (Italian, Japanese, Chinese,
+Indian, Korean…), diets (halal, vegetarian, vegan) and times ("around 1pm", "before 10am", "45 min in", "at Asar").
+Anything else becomes a place-name search. Muslim prayer times (MUIS) are placed on the route when the trip has a
+mosque or prayer stop, or when the user switches them on.
 
 The web app has two pages: a landing page at `/` that explains what the app does and how it is built
 (architecture, the 10-stage planning pipeline, provider fallbacks, scoring rules), and the planner at
-`/plan`. The planner has a light game layer — stars per trip, XP and levels, 16 badges, optional sound
+`/plan`. The planner has a light game layer — stars per trip, XP and levels, 17 badges, optional sound
 effects — computed in the browser from the plan and stored in `localStorage` only (`frontend/src/lib/game.ts`).
 
 $0 stack, no card-gated services. Design: [docs/DESIGN.md](docs/DESIGN.md) · trade-offs: [docs/DECISIONS.md](docs/DECISIONS.md).
@@ -68,6 +74,7 @@ The OneMap fixtures in `backend/tests/fixtures/onemap/` are real responses recor
 | GET | `/api/prayer-times?lat&lng&date&asr=shafii` | MUIS times |
 | GET | `/api/geocode?q=` | `[{name, address, lat, lng, source}]` |
 | GET | `/api/categories` | stop categories (for the chip editor) |
+| GET | `/api/cuisines` | cuisine filters for food stops |
 | GET | `/api/health` | providers, POI DB version/date |
 
 ## Deploy ($0)
@@ -79,8 +86,8 @@ The OneMap fixtures in `backend/tests/fixtures/onemap/` are real responses recor
 
 ## Honest limitations
 
-Halal data in OSM is sparse and MUIS certification isn't in OSM — weak hints are labelled and the app never claims
-certification. Mall prayer rooms are rarely mapped. Many places lack opening hours ("hours unknown"). Transit
+Cuisine and dietary tags in OSM are patchy (e.g. only a few places carry `diet:halal`) and certifications aren't in
+OSM at all — weak hints are labelled and the app never claims certification. Small prayer rooms are rarely mapped. Many places lack opening hours ("hours unknown"). Transit
 detours are estimates (headway/2). Google Maps ignores waypoints for transit, so per-leg links are offered.
 The greedy multi-stop pass (D7) is explainable but not globally optimal — pin alternatives with "Use this".
 

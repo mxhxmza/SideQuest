@@ -19,7 +19,7 @@ const TIERS = [
     icon: "🌐",
     title: "Data & providers",
     sub: "Free tiers, with fallbacks",
-    items: ["OneMap (SLA) routing + search", "OSRM / OpenRouteService fallback", "44k OpenStreetMap places, local", "adhanpy prayer maths, offline"],
+    items: ["OneMap (SLA) routing + search", "OSRM / OpenRouteService fallback", "44k OpenStreetMap places, local", "MUIS prayer times (adhanpy), offline"],
     grad: "from-amber-200 to-orange-500",
   },
 ];
@@ -29,7 +29,7 @@ const STAGES = [
     icon: "🗣️",
     name: "Parse",
     detail:
-      "A rules parser (optionally a local or hosted LLM, always falling back to rules) turns your sentence into typed stops: category, time window (“at Asar”, “~1pm”, “45 min in”), dietary needs and how long you'll stay. Anything it can't place becomes a name search instead of being dropped.",
+      "A rules parser (optionally a local or hosted LLM, always falling back to rules) turns your sentence into typed stops: one of 28 place types, a cuisine, dietary needs, a time window (“~1pm”, “before 10am”, “45 min in”, “at Asar”) and how long you'll stay. Anything it can't place becomes a name search instead of being dropped.",
     file: "providers/llm/rules.py",
   },
   {
@@ -48,14 +48,14 @@ const STAGES = [
     icon: "🎯",
     name: "Windows",
     detail:
-      "Each stop's time window is mapped onto a stretch of the route — the Asar window, ±tolerance around 1pm, or a minutes-into-trip mark. Earlier stops delay later ones, so windows are re-computed as stops are placed.",
+      "Each stop's time window is mapped onto a stretch of the route — ±tolerance around 1pm, “before 10am”, a minutes-into-trip mark, or a prayer time. Earlier stops delay later ones, so windows are re-computed as stops are placed.",
     file: "core/segments.py",
   },
   {
     icon: "📍",
     name: "Search",
     detail:
-      "Candidates come from an SQLite R*Tree of OpenStreetMap places, within a corridor around that stretch. Tag filters pick the category; opening hours are evaluated at your ETA; dietary tags are checked as evidence.",
+      "Candidates come from an SQLite R*Tree of OpenStreetMap places, within a corridor around that stretch. Tag filters pick the category (a church is amenity=place_of_worship + religion=christian); opening hours are evaluated at your ETA; cuisine and dietary tags are checked as evidence.",
     file: "providers/places/osm_sqlite.py",
   },
   {
@@ -87,7 +87,7 @@ const STAGES = [
   {
     icon: "🚀",
     name: "Hand-off",
-    detail: "The final timeline, prayer markers and a Google Maps link with your stops as waypoints (one link per leg for public transport, since Maps can't add transit waypoints).",
+    detail: "The final timeline (with Muslim prayer times when you asked for a mosque) and a Google Maps link with your stops as waypoints (one link per leg for public transport, since Maps can't add transit waypoints).",
     file: "core/deeplink.py",
   },
 ];

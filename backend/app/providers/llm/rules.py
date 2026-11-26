@@ -1,6 +1,6 @@
 """Rule-based NL parser (default backend, DESIGN §6).
 
-clauses (split on , ; and then) → keyword lexicon → category, dietary lexicon,
+clauses (split on , ; and then) → keyword lexicon → category, dietary + cuisine lexicons,
 time regexes ("around 1pm", "at 13:30", "45 min in", "after an hour", "at Asr",
 "before Maghrib").
 """
@@ -99,6 +99,15 @@ def detect_dietary(clause: str) -> list[str]:
     return out
 
 
+def detect_cuisine(clause: str) -> list[str]:
+    """Cuisines mentioned in a clause ("italian", "sushi" → japanese)."""
+    return [key for key, cd in T.CUISINES.items() if _find_phrase(clause, cd.synonyms)]
+
+
+def _is_food(cat: Optional[str]) -> bool:
+    return cat is not None and T.get(cat).kind in T.CUISINE_KINDS
+
+
 def _until(clause: str) -> Optional[str]:
     m = RE_UNTIL.search(clause)
     if not m:
@@ -168,11 +177,11 @@ hmm hm um uh erm ok okay whatever thanks thank yes no so just really very too lo
 
 
 def content_words(clause: str) -> list[str]:
-    """Words left once time expressions, prayer names, dietary words and filler are removed."""
+    """Words left once time expressions, prayer names, dietary/cuisine words and filler are removed."""
     low = clause.lower()
     for rx in (RE_PRAYER, RE_CLOCK_AMPM, RE_CLOCK_24, RE_NOON, RE_MIN_IN, RE_AFTER, RE_HALFWAY):
         low = rx.sub(" ", low)
-    for syns in T.DIETARY_SYNONYMS.values():
+    for syns in [*T.DIETARY_SYNONYMS.values(), *(c.synonyms for c in T.CUISINES.values())]:
         for syn in syns:
             low = re.sub(r"(?<![a-z])" + re.escape(syn) + r"(?![a-z])", " ", low)
     words = re.findall(r"[a-z0-9][a-z0-9'&-]*", low)
@@ -182,13 +191,17 @@ def content_words(clause: str) -> list[str]:
 def _merge_fragments(clauses: list[str]) -> list[str]:
     """Re-attach pure modifiers (e.g. 'halal' or 'around 1pm') to the previous clause:
     'lunch, halal, around 1pm'. A clause with real content of its own is never merged —
-    that used to swallow requests the lexicon didn't know (e.g. 'halal ... ice cream')."""
+    that used to swallow requests the lexicon didn't know (e.g. 'halal ... ice cream').
+    A cuisine ('pizza') only merges into a food clause; after 'petrol' it is its own stop."""
     out: list[str] = []
     for c in clauses:
         low = c.lower()
         has_cat = detect_category(low) is not None
         has_prayer = RE_PRAYER.search(low) is not None
-        if out and not has_cat and not has_prayer and not content_words(low):
+        prev_cat = detect_category(out[-1].lower()) if out else None
+        cuisine_ok = not detect_cuisine(low) or (
+            bool(out) and (_is_food(prev_cat) or (prev_cat is None and bool(detect_cuisine(out[-1].lower())))))
+        if out and not has_cat and not has_prayer and not content_words(low) and cuisine_ok:
             out[-1] = out[-1] + " " + c
         else:
             out.append(c)
@@ -216,10 +229,13 @@ class RulesParser:
             low = clause.lower()
             cat = detect_category(low)
             diet = detect_dietary(low)
+            cuisine = detect_cuisine(low)
             keywords: list[str] = []
             label = None
             if cat is None and RE_PRAYER.search(low):
                 cat = "prayer_room"
+            if cat is None and cuisine:
+                cat = "meal"  # "pizza", "something japanese"
             if cat is None:
                 words = content_words(low)
                 if words:
@@ -236,6 +252,7 @@ class RulesParser:
             stops.append(StopRequest(
                 id=f"s{len(stops) + 1}", query=clause, category=cat, name_keywords=keywords, label=label,
                 time_window=win,
-                constraints=StopConstraints(dietary=diet if T.get(cat).kind in T.DIETARY_KINDS else []),
+                constraints=StopConstraints(dietary=diet if T.get(cat).kind in T.DIETARY_KINDS else [],
+                                            cuisine=cuisine if T.get(cat).kind in T.CUISINE_KINDS else []),
             ))
         return stops, unrecognized

@@ -19,7 +19,7 @@ import { linkTo } from "../lib/router";
 import { sfx } from "../lib/sfx";
 import { useGame } from "../lib/useGame";
 import Logo from "../components/Logo";
-import type { Category, Health, Mode, Point, StopRequest, TripPlan } from "../types";
+import type { Category, Cuisine, Health, Mode, Point, StopRequest, TripPlan } from "../types";
 
 type ServerState = "checking" | "waking" | "ok" | "down";
 
@@ -36,6 +36,27 @@ function useMediaQuery(q: string): boolean {
 
 let toastSeq = 0;
 
+// Islamic prayer times along the route: shown automatically when the trip has a mosque or
+// prayer stop, otherwise behind a toggle. The choice is remembered in this browser.
+const PRAYER_KEY = "sidequest.prayers";
+function loadPrayerPref(): "on" | "off" | null {
+  try {
+    const v = localStorage.getItem(PRAYER_KEY);
+    return v === "on" || v === "off" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/** ?q=… from the landing page's "try it" chips */
+function initialPrompt(): string {
+  try {
+    return (new URLSearchParams(location.search).get("q") ?? "").slice(0, 300);
+  } catch {
+    return "";
+  }
+}
+
 export default function Planner() {
   const [origin, setOrigin] = useState<Point | null>(null);
   const [destination, setDestination] = useState<Point | null>(null);
@@ -43,12 +64,14 @@ export default function Planner() {
   const [destText, setDestText] = useState("");
   const [mode, setMode] = useState<Mode>("drive");
   const [depart, setDepart] = useState(localInputNow());
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialPrompt);
   const [stops, setStops] = useState<StopRequest[]>([]);
   const [unrecognized, setUnrecognized] = useState<string[]>([]);
   const [parsedText, setParsedText] = useState("");
   const [parsing, setParsing] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [cuisines, setCuisines] = useState<Cuisine[]>([]);
+  const [prayerPref, setPrayerPref] = useState(loadPrayerPref);
   const [plan, setPlan] = useState<TripPlan | null>(null);
   const [reward, setReward] = useState<Reward | null>(null);
   const [pinned, setPinned] = useState<Record<string, string>>({});
@@ -74,6 +97,7 @@ export default function Planner() {
       .then((h) => {
         setHealth(h);
         setServer("ok");
+        api.cuisines().then(setCuisines, () => {});
         return api.categories().then(setCategories);
       })
       .catch(() => setServer("down"))
@@ -242,6 +266,20 @@ export default function Planner() {
     setDestText(originText);
   };
 
+  const prayerTrip = !!plan?.stops.some(
+    (s) => ["mosque", "prayer_room"].includes(s.request.category) || s.request.time_window.type === "prayer",
+  );
+  const showPrayers = prayerPref === "on" || (prayerPref !== "off" && prayerTrip);
+  const togglePrayers = () => {
+    const next = showPrayers ? "off" : "on";
+    setPrayerPref(next);
+    try {
+      localStorage.setItem(PRAYER_KEY, next);
+    } catch {
+      /* ignore */
+    }
+  };
+
   const transitUnavailable = health && health.routing.transit.length === 0;
   const modeInfo = MODES.find((m) => m.key === mode);
 
@@ -257,6 +295,7 @@ export default function Planner() {
           onSelectStop={setSelected}
           onPickCandidate={pin}
           padLeft={desktop ? 500 : 0}
+          showPrayers={showPrayers}
         />
         {busy && <PlanningOverlay />}
       </div>
@@ -381,6 +420,7 @@ export default function Planner() {
                 onStops={(s) => (setStops(s), setPinned({}))}
                 unrecognized={unrecognized}
                 categories={categories}
+                cuisines={cuisines}
                 parsing={parsing}
               />
 
@@ -398,7 +438,7 @@ export default function Planner() {
                 <ol className="grid grid-cols-3 gap-2 pt-1 text-center text-[11px] text-slate-400">
                   {[
                     ["📍", "Set start & finish"],
-                    ["📜", "Type your side quests"],
+                    ["📜", "Ask for anything on the way"],
                     ["⭐", "Fewest extra minutes wins"],
                   ].map(([i, t], k) => (
                     <li key={t} className="animate-fade-up rounded-2xl bg-white/[0.04] px-2 py-3 ring-1 ring-white/5" style={{ animationDelay: `${150 + k * 90}ms` }}>
@@ -431,6 +471,8 @@ export default function Planner() {
                 selectedStopId={selected}
                 onSelectStop={setSelected}
                 onSuggestMosque={suggestMosque}
+                showPrayers={showPrayers}
+                onTogglePrayers={togglePrayers}
                 renderDetail={(id) => {
                   const sp = plan.stops.find((s) => s.request.id === id);
                   return sp ? <StopDetail stop={sp} busy={busy} onUse={(osm) => pin(id, osm)} /> : null;
@@ -480,11 +522,12 @@ function DataNotes({ plan, health }: { plan: TripPlan; health: Health | null }) 
           real routing.
         </li>
         <li>
-          Places come from OpenStreetMap{health?.poi_db.data_timestamp ? ` (data as of ${health.poi_db.data_timestamp.slice(0, 10)})` : ""}. Halal tags are
-          sparse and MUIS certification isn't in OSM: “?” badges are hints, not facts. This app never claims certification.
+          Places come from OpenStreetMap{health?.poi_db.data_timestamp ? ` (data as of ${health.poi_db.data_timestamp.slice(0, 10)})` : ""}. Cuisine and
+          dietary tags (halal, vegetarian, vegan) are patchy, and certifications aren't in OSM: “?” badges are hints, not facts. This app never claims
+          certification.
         </li>
-        <li>Many places have no opening hours in OSM, so “hours unknown” is common. Mall prayer rooms are rarely mapped.</li>
-        <li>Prayer times use the MUIS method, computed at your starting point.</li>
+        <li>Many places have no opening hours in OSM, so “hours unknown” is common. Small prayer rooms and shrines are often unmapped.</li>
+        <li>Muslim prayer times (shown with a mosque stop, or via the toggle) use the MUIS method, computed at your starting point.</li>
         <li>Stars, XP and badges are just for fun and are stored in this browser only.</li>
       </ul>
     </details>

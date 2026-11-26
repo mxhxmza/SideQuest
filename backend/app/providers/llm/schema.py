@@ -12,6 +12,7 @@ from app.models import ParseContext, StopConstraints, StopRequest, TimeWindow
 
 Category = Literal[T.CATEGORY_KEYS]  # type: ignore[valid-type]
 Dietary = Literal[T.DIETARY_KEYS]  # type: ignore[valid-type]
+Cuisine = Literal[T.CUISINE_KEYS]  # type: ignore[valid-type]
 
 MEAL_WORDS = ("lunch", "dinner", "breakfast", "brunch", "supper")
 
@@ -35,6 +36,7 @@ class LLMStop(BaseModel):
     query: str
     category: Category
     dietary: list[Dietary] = Field(default_factory=list)
+    cuisine: list[Cuisine] = Field(default_factory=list)
     time_window: LLMWindow = Field(default_factory=LLMWindow)
     keywords: list[str] = Field(default_factory=list)  # only for category "keyword"
 
@@ -51,7 +53,7 @@ def system_prompt() -> str:
     cats = "\n".join(f"- {k}: {c.label} (e.g. {', '.join(c.synonyms[:4])})" for k, c in T.CATEGORIES.items())
     return f"""You turn a traveller's free-text list of stops into JSON.
 Return ONLY JSON matching: {{"stops": [{{"query": str, "category": one of the keys below,
-"dietary": [subset of {list(T.DIETARY_KEYS)}], "time_window": {{"type": "minutes_in"|"clock_time"|"prayer"|"any",
+"dietary": [subset of {list(T.DIETARY_KEYS)}], "cuisine": [subset of {list(T.CUISINE_KEYS)}], "time_window": {{"type": "minutes_in"|"clock_time"|"prayer"|"any",
 "value": number|string|null, "relation": "at"|"before"|"after", "until": "HH:MM"|null}}}}]}}
 
 Categories (use the key exactly; never invent new ones):
@@ -68,6 +70,9 @@ Time window rules:
 - No time mentioned -> type any, value null.
 - "pray"/"surau"/"musolla" without the word mosque -> prayer_room.
 - Dietary words (halal, vegetarian, vegan) go in dietary, not in the category.
+- Cuisines ("Italian dinner", "sushi", "dim sum") go in cuisine with category meal (or another food
+  category). Places of worship: church, temple, buddhist_temple, hindu_temple, taoist_temple, gurdwara,
+  synagogue, mosque; Islamic prayer times only apply when the user names one.
 - If no category fits, use category "keyword" and put 1-2 short place-name search words in "keywords"
   (e.g. "buy durian" -> keywords ["durian"]). Never drop a requested stop.
 One entry per requested stop, in the order given. "query" is the user's words for that stop."""
@@ -93,8 +98,9 @@ def to_stop_requests(out: LLMOutput) -> list[StopRequest]:
             name_keywords=list(s.keywords) if s.category == "keyword" else [],
             time_window=TimeWindow(type=w.type, value=w.value, relation=w.relation, tolerance_min=tol,
                                    until=_hhmm(w.until) if w.type == "prayer" and w.until else None),
-            constraints=StopConstraints(dietary=list(s.dietary) if T.get(s.category).kind in T.DIETARY_KINDS
-                                        else [])))
+            constraints=StopConstraints(
+                dietary=list(s.dietary) if T.get(s.category).kind in T.DIETARY_KINDS else [],
+                cuisine=list(s.cuisine) if T.get(s.category).kind in T.CUISINE_KINDS else [])))
     return res
 
 

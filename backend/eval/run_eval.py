@@ -21,11 +21,12 @@ from app.config import get_settings  # noqa: E402
 from app.models import ParseContext  # noqa: E402
 from app.providers.llm.service import ParseService  # noqa: E402
 
-FIELDS = ("category", "dietary", "type", "value")
+FIELDS = ("category", "dietary", "cuisine", "type", "value")
 
 
 def norm_expected(e: dict) -> dict:
-    return {"category": e["category"], "dietary": sorted(e.get("dietary", [])), "type": e["window"]["type"],
+    return {"category": e["category"], "dietary": sorted(e.get("dietary", [])), "cuisine": sorted(e.get("cuisine", [])),
+            "type": e["window"]["type"],
             "value": e["window"].get("value")}
 
 
@@ -33,7 +34,8 @@ def norm_got(s) -> dict:
     v = s.time_window.value
     if isinstance(v, float) and v.is_integer():
         v = int(v)
-    return {"category": s.category, "dietary": sorted(s.constraints.dietary), "type": s.time_window.type,
+    return {"category": s.category, "dietary": sorted(s.constraints.dietary), "cuisine": sorted(s.constraints.cuisine),
+            "type": s.time_window.type,
             "value": v}
 
 

@@ -263,3 +263,14 @@ def test_clock_sequences_stops_at_the_same_point():
     t2 = c.free_slot(1000.0)              # charger snapped to the same point
     assert t2 > 1000.0
     assert c.at(t2) == dep + timedelta(seconds=1000 + 20 * 60) + timedelta(seconds=t2 - 1000)
+
+
+def test_cuisine_evidence():
+    from app.core.scoring import cuisine_evidence
+    assert cuisine_evidence({"cuisine": "pizza;italian"}, ["italian"])[0:3:2] == (True, False)
+    ok, ev, weak = cuisine_evidence({"name": "Sushi Tei"}, ["japanese"])
+    assert ok and weak and "sushi" in ev[0].text
+    assert cuisine_evidence({"cuisine": "chinese", "name": "Wok Hey"}, ["italian"])[0] is False
+    assert cuisine_evidence({}, [])[0] is True
+    # any requested cuisine may match
+    assert cuisine_evidence({"cuisine": "thai"}, ["italian", "thai"])[0] is True

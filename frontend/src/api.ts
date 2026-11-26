@@ -1,4 +1,4 @@
-import type { Category, GeocodeResult, Health, ParseResponse, TripPlan, TripRequest } from "./types";
+import type { Category, Cuisine, GeocodeResult, Health, ParseResponse, TripPlan, TripRequest } from "./types";
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 
@@ -36,6 +36,7 @@ async function req<T>(path: string, init?: RequestInit & { timeoutMs?: number })
 export const api = {
   health: (timeoutMs = 75_000) => req<Health>("/api/health", { timeoutMs }),
   categories: () => req<Category[]>("/api/categories"),
+  cuisines: () => req<Cuisine[]>("/api/cuisines"),
   geocode: (q: string, signal?: AbortSignal) =>
     req<GeocodeResult[]>(`/api/geocode?q=${encodeURIComponent(q)}`, { signal }),
   parse: (text: string, departure_time?: string, signal?: AbortSignal) =>

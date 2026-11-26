@@ -43,6 +43,6 @@ class ParseService:
             stops, unrecognized = self.rules.parse_with_notes(text, ctx)
             used = "rules"
         if not stops and text.strip():
-            warnings.append("No stops recognised. Try e.g. 'halal lunch around 1pm, mosque at Asr'.")
+            warnings.append("No stops recognised. Try e.g. 'Italian lunch around 1pm, a church, then petrol'.")
         return ParseResponse(backend_used=used, stops=[normalize_stop(s) for s in stops], warnings=warnings,
                              unrecognized=unrecognized)

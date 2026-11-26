@@ -25,3 +25,10 @@
 {"text": "mosque to pray asr, some halal shop to buy ice cream along the way", "expected": [{"category": "mosque", "window": {"type": "prayer", "value": "asr"}}, {"category": "ice_cream", "dietary": ["halal"], "window": {"type": "any"}}]}
 {"text": "something sweet after an hour", "expected": [{"category": "ice_cream", "window": {"type": "minutes_in", "value": 60}}]}
 {"text": "buy durian on the way", "expected": [{"category": "keyword", "window": {"type": "any"}}]}
+{"text": "church before 10am, then Italian dinner around 7pm", "expected": [{"category": "church", "window": {"type": "clock_time", "value": "10:00"}}, {"category": "meal", "cuisine": ["italian"], "window": {"type": "clock_time", "value": "19:00"}}]}
+{"text": "Hindu temple, then a vegetarian lunch", "expected": [{"category": "hindu_temple", "window": {"type": "any"}}, {"category": "meal", "dietary": ["vegetarian"], "window": {"type": "clock_time", "value": "12:30"}}]}
+{"text": "Buddhist temple and Japanese food around 1pm", "expected": [{"category": "buddhist_temple", "window": {"type": "any"}}, {"category": "meal", "cuisine": ["japanese"], "window": {"type": "clock_time", "value": "13:00"}}]}
+{"text": "gurdwara, then korean bbq", "expected": [{"category": "gurdwara", "window": {"type": "any"}}, {"category": "meal", "cuisine": ["korean"], "window": {"type": "any"}}]}
+{"text": "petrol, then pizza", "expected": [{"category": "petrol", "window": {"type": "any"}}, {"category": "meal", "cuisine": ["pizza"], "window": {"type": "any"}}]}
+{"text": "sunday mass then dim sum", "expected": [{"category": "church", "window": {"type": "any"}}, {"category": "meal", "cuisine": ["chinese"], "window": {"type": "any"}}]}
+{"text": "taoist temple 30 min in, halal indian dinner", "expected": [{"category": "taoist_temple", "window": {"type": "minutes_in", "value": 30}}, {"category": "meal", "dietary": ["halal"], "cuisine": ["indian"], "window": {"type": "clock_time", "value": "19:00"}}]}

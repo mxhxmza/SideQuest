@@ -2,30 +2,27 @@ import { useSeen } from "../../lib/useReveal";
 
 type Term = { label: string; v: number; color: string };
 
-/** Illustrative candidates for one stop ("halal ice cream"); penalty values are the planner's real ones. */
+/** Illustrative candidates for one stop ("Italian dinner"); penalty values are the planner's real ones. */
 const CANDS: { name: string; note: string; terms: Term[] }[] = [
   {
-    name: "Gelato bar, 3 streets away",
-    note: "tagged halal · opening hours not mapped",
-    terms: [
-      { label: "Detour", v: 5, color: "bg-brand-400" },
-      { label: "Hours unknown", v: 3, color: "bg-slate-400" },
-    ],
+    name: "Trattoria, two streets away",
+    note: "tagged cuisine=italian · open when you'd arrive",
+    terms: [{ label: "Detour", v: 4, color: "bg-brand-400" }],
   },
   {
-    name: "Dessert café, next to the road",
-    note: "name says “halal”, no tag · hours not mapped",
-    terms: [
-      { label: "Detour", v: 1, color: "bg-brand-400" },
-      { label: "Weak halal evidence", v: 5, color: "bg-amber-400" },
-      { label: "Hours unknown", v: 3, color: "bg-slate-400" },
-    ],
-  },
-  {
-    name: "Ice-cream kiosk, right on the route",
-    note: "tagged halal · closed when you'd arrive",
+    name: "Pizza place, right on the route",
+    note: "Italian only by its name · opening hours not mapped",
     terms: [
       { label: "Detour", v: 0.5, color: "bg-brand-400" },
+      { label: "Matched by name only", v: 2, color: "bg-amber-400" },
+      { label: "Hours unknown", v: 3, color: "bg-slate-400" },
+    ],
+  },
+  {
+    name: "Osteria by the exit",
+    note: "tagged cuisine=italian · closed when you'd arrive",
+    terms: [
+      { label: "Detour", v: 1, color: "bg-brand-400" },
       { label: "Closed at ETA", v: 60, color: "bg-rose-500" },
     ],
   },
@@ -35,13 +32,14 @@ const SCALE = 14; // minutes shown at full bar width
 
 export const RULES: [string, string][] = [
   ["Detour", "real extra minutes, verified by routing"],
-  ["Waiting", "minutes spent waiting for a prayer time to begin"],
+  ["Waiting", "minutes waiting for a prayer time to begin (mosque stops)"],
   ["Closed at your ETA", "+60"],
   ["Opening hours unknown", "+3"],
   ["Outside the time window", "+0.5 per minute outside"],
   ["Pushes later stops late", "+0.5 per minute"],
-  ["Weak dietary evidence", "+5"],
-  ["Matched by name only / no name", "+2"],
+  ["Weak dietary evidence (halal, veg…)", "+5"],
+  ["Category or cuisine only in the name", "+2"],
+  ["Place has no name", "+2"],
   ["Off the target time", "+0.1 per minute (tie-breaker)"],
   ["Combo with another stop", "bonus, subtracted"],
 ];

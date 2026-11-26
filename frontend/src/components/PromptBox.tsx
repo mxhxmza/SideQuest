@@ -1,22 +1,27 @@
 import { useEffect, useState } from "react";
-import type { Category, StopRequest } from "../types";
+import type { Category, Cuisine, StopRequest } from "../types";
 import StopChips from "./StopChips";
 
 const EXAMPLES = [
-  "halal lunch around 1pm, a mosque near Asr time, somewhere to buy a phone charger",
-  "mosque to pray Asr, a halal shop to buy ice cream along the way",
-  "coffee 45 min in, then petrol and a toilet",
-  "vegetarian dinner at 7pm and a pharmacy",
-  "pray Zohor, then grab bubble tea",
+  "Italian dinner around 7pm, then petrol and a pharmacy",
+  "church before 10am, then a coffee",
+  "Hindu temple, then a vegetarian lunch",
+  "mosque at Asr, then a halal restaurant",
+  "Buddhist temple and Japanese food around 1pm",
+  "coffee 45 min in, then an ATM and a toilet",
+  "gurdwara, then Korean BBQ",
 ];
 
 const QUICK = [
-  { icon: "🍽", text: "halal lunch around 1pm" },
+  { icon: "🍝", text: "Italian dinner" },
+  { icon: "🍣", text: "sushi" },
+  { icon: "⛪", text: "church" },
+  { icon: "🛕", text: "temple" },
   { icon: "🕌", text: "mosque at Asr" },
-  { icon: "🍨", text: "ice cream" },
+  { icon: "🥗", text: "vegetarian lunch" },
   { icon: "☕", text: "coffee" },
   { icon: "⛽", text: "petrol" },
-  { icon: "🚻", text: "toilet" },
+  { icon: "💊", text: "pharmacy" },
 ];
 
 interface Props {
@@ -26,10 +31,11 @@ interface Props {
   onStops: (s: StopRequest[]) => void;
   unrecognized: string[];
   categories: Category[];
+  cuisines: Cuisine[];
   parsing: boolean;
 }
 
-export default function PromptBox({ text, onText, stops, onStops, unrecognized, categories, parsing }: Props) {
+export default function PromptBox({ text, onText, stops, onStops, unrecognized, categories, cuisines, parsing }: Props) {
   const [focused, setFocused] = useState(false);
   const [ex, setEx] = useState(0);
 
@@ -93,10 +99,10 @@ export default function PromptBox({ text, onText, stops, onStops, unrecognized, 
             <span aria-hidden>✨</span> Quest log · {stops.length}
             <span className="font-sans font-medium normal-case tracking-normal text-slate-400">· tap one to tweak it</span>
           </p>
-          <StopChips stops={stops} categories={categories} onChange={onStops} />
+          <StopChips stops={stops} categories={categories} cuisines={cuisines} onChange={onStops} />
           {unrecognized.map((u) => (
             <p key={u} className="mt-2 animate-pop text-xs text-amber-300">
-              🤔 Didn't understand “{u}” — try naming the place or thing, e.g. “ice cream”, “ATM”.
+              🤔 Didn't understand “{u}” — try naming the place or thing, e.g. “church”, “sushi”, “ATM”.
             </p>
           ))}
         </div>

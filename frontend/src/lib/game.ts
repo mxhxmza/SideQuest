@@ -32,7 +32,18 @@ export interface RunResult {
 }
 
 const FOOD = new Set(["meal", "hawker", "cafe", "ice_cream", "bakery"]);
-const PRAYER = new Set(["mosque", "prayer_room"]);
+/** places of worship, every faith */
+export const WORSHIP = new Set([
+  "mosque",
+  "prayer_room",
+  "church",
+  "temple",
+  "buddhist_temple",
+  "hindu_temple",
+  "taoist_temple",
+  "gurdwara",
+  "synagogue",
+]);
 
 /** Distinct places actually visited (a combined stop counts once). */
 function physicalStops(plan: TripPlan): number {
@@ -46,7 +57,10 @@ export function scoreRun(plan: TripPlan): RunResult {
   const requested = plan.stops.length;
   const found = plan.stops.filter((s) => s.chosen).length;
   const combos = plan.stops.filter((s) => s.chosen && s.covered_by).length;
-  const prayers = plan.stops.filter((s) => s.chosen && s.request.time_window.type === "prayer").length;
+  // timed stops ("around 1pm", "at Asar", "45 min in") reached inside their window
+  const onTime = plan.stops.filter(
+    (s) => s.chosen && s.request.time_window.type !== "any" && !("outside_window" in s.chosen.score_breakdown),
+  ).length;
   const added = plan.total_added_min;
 
   let stars: RunResult["stars"];
@@ -77,7 +91,7 @@ export function scoreRun(plan: TripPlan): RunResult {
   const lines: XpLine[] = [{ label: "Route planned", xp: 50 }];
   if (found) lines.push({ label: `Side quests found ×${found}`, xp: 25 * found });
   if (combos) lines.push({ label: `Combo stops ×${combos}`, xp: 20 * combos });
-  if (prayers) lines.push({ label: `Prayer on time ×${prayers}`, xp: 20 * prayers });
+  if (onTime) lines.push({ label: `On-time stops ×${onTime}`, xp: 20 * onTime });
   const efficiency = found ? Math.max(0, Math.round(30 - added)) : 0;
   if (efficiency) lines.push({ label: "Efficiency bonus", xp: efficiency });
   if (stars) lines.push({ label: `Star bonus ×${stars}`, xp: 10 * stars });
@@ -137,11 +151,11 @@ const chosen = (plan: TripPlan) => plan.stops.filter((s) => s.chosen);
 export const BADGES: Badge[] = [
   { id: "first", icon: "🗺️", name: "First Steps", desc: "Plan your first trip", test: () => true },
   {
-    id: "prayer",
-    icon: "🕌",
-    name: "Prayer Keeper",
-    desc: "Fit a mosque or surau into a prayer time",
-    test: (p) => chosen(p).some((s) => PRAYER.has(s.request.category) && s.request.time_window.type === "prayer"),
+    id: "faith",
+    icon: "🙏",
+    name: "Pilgrim",
+    desc: "Visit a place of worship — church, temple, mosque, gurdwara…",
+    test: (p) => chosen(p).some((s) => WORSHIP.has(s.request.category)),
   },
   { id: "combo", icon: "⚡", name: "Combo!", desc: "Clear two side quests at one stop", test: (p) => chosen(p).some((s) => s.covered_by) },
   {
@@ -161,14 +175,23 @@ export const BADGES: Badge[] = [
   { id: "foodie", icon: "🍜", name: "Foodie", desc: "Find a meal, hawker, café or bakery stop", test: (p) => chosen(p).some((s) => FOOD.has(s.request.category)) },
   { id: "sweet", icon: "🍨", name: "Sweet Tooth", desc: "Find ice cream or dessert", test: (p) => chosen(p).some((s) => s.request.category === "ice_cream") },
   {
-    id: "halal",
-    icon: "🥘",
-    name: "Halal Hunter",
-    desc: "Find a stop tagged halal in OpenStreetMap",
+    id: "diet",
+    icon: "🥗",
+    name: "Diet Detective",
+    desc: "Find a stop tagged for your diet — halal, vegetarian or vegan",
     test: (p) =>
       chosen(p).some(
-        (s) => s.request.constraints.dietary.includes("halal") && s.chosen!.evidence.some((e) => e.strength === "strong" && /halal/i.test(e.text)),
+        (s) =>
+          s.request.constraints.dietary.length > 0 &&
+          s.chosen!.evidence.some((e) => e.strength === "strong" && /diet:|cuisine=veg/i.test(e.text)),
       ),
+  },
+  {
+    id: "world",
+    icon: "🌍",
+    name: "World Tour",
+    desc: "Find a restaurant by cuisine — Italian, Japanese, Indian…",
+    test: (p) => chosen(p).some((s) => (s.request.constraints.cuisine ?? []).length > 0),
   },
   { id: "treasure", icon: "🔎", name: "Treasure Hunter", desc: "Find a place by name search", test: (p) => chosen(p).some((s) => s.request.category === "keyword") },
   { id: "rail", icon: "🚇", name: "Rail Rider", desc: "Plan a public-transport trip", test: (_, c) => c.mode === "transit" },

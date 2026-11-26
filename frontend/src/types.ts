@@ -26,7 +26,8 @@ export interface StopRequest {
   osm_filters?: { tags: Record<string, string[]> }[];
   name_keywords?: string[];
   time_window: TimeWindow;
-  constraints: { open_at_eta: boolean; dietary: string[] };
+  /** cuisine: food stops only, any of these ("italian"); empty = any */
+  constraints: { open_at_eta: boolean; dietary: string[]; cuisine?: string[] };
   dwell_min?: number | null;
   label?: string | null;
   icon?: string | null;
@@ -149,6 +150,11 @@ export interface Category {
   icon: string;
   dwell_min: number;
   kind: string;
+}
+
+export interface Cuisine {
+  key: string;
+  label: string;
 }
 
 export interface Health {

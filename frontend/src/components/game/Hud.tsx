@@ -11,7 +11,7 @@ interface Props {
 export default function Hud({ stats, sound, onSound, onTrophies }: Props) {
   const lv = levelOf(stats.xp);
   const pct = (lv.into / lv.need) * 100;
-  const count = Object.keys(stats.badges).length;
+  const count = BADGES.filter((b) => stats.badges[b.id]).length;
   return (
     <div className="flex items-center gap-2.5 rounded-2xl bg-black/30 p-2 ring-1 ring-white/10">
       <div

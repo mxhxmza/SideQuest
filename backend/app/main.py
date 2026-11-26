@@ -84,3 +84,9 @@ def categories():
     from app.core.tags import CATEGORIES
     return [{"key": k, "label": c.label, "icon": c.icon, "dwell_min": c.dwell_min, "kind": c.kind}
             for k, c in CATEGORIES.items()]
+
+
+@app.get("/api/cuisines")
+def cuisines():
+    from app.core.tags import CUISINES
+    return [{"key": k, "label": c.label} for k, c in CUISINES.items()]

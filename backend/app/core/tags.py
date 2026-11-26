@@ -21,12 +21,20 @@ class CategoryDef:
     filters: tuple[dict[str, tuple[str, ...]], ...]
     name_keywords: tuple[str, ...] = ()
     dwell_min: float = 15
-    kind: str = "shop"  # meal | prayer | shop | service | leisure
+    kind: str = "shop"  # meal | prayer | worship | shop | service | leisure | search
     # Synonyms used by the rules parser (lower-case; multi-word allowed).
     synonyms: tuple[str, ...] = field(default=())
 
 
 _MUSLIM_WORSHIP = {"amenity": ("place_of_worship",), "religion": ("muslim",)}
+
+
+def _worship(*religions: str) -> dict[str, tuple[str, ...]]:
+    return {"amenity": ("place_of_worship",), "religion": religions}
+
+
+# kinds whose places are places of worship (shrine/tomb exclusion, name-match rules)
+WORSHIP_KINDS = ("prayer", "worship")
 
 CATEGORIES: dict[str, CategoryDef] = {
     c.key: c
@@ -61,6 +69,57 @@ CATEGORIES: dict[str, CategoryDef] = {
             synonyms=("ice cream", "ice-cream", "icecream", "gelato", "dessert", "desserts", "frozen yogurt",
                       "froyo", "sundae", "soft serve", "something sweet", "cendol", "ice kacang", "sorbet"),
         ),
+        # Places of worship for every faith mapped in the region. The "prayer" kind (mosque,
+        # surau) can also use Islamic prayer-time windows; the rest are ordinary stops.
+        CategoryDef(
+            "church", "Church", "⛪",
+            (_worship("christian"),),
+            name_keywords=("church", "cathedral", "chapel", "parish"),
+            dwell_min=45, kind="worship",
+            synonyms=("church", "cathedral", "chapel", "parish", "mass", "sunday mass", "sunday service",
+                      "church service"),
+        ),
+        CategoryDef(
+            "temple", "Temple (any)", "🛕",
+            (_worship("buddhist", "hindu", "taoist", "chinese_folk", "shinto", "jain"),),
+            name_keywords=("temple",),
+            dwell_min=30, kind="worship",
+            synonyms=("temple", "temples"),
+        ),
+        CategoryDef(
+            "buddhist_temple", "Buddhist temple", "☸️",
+            (_worship("buddhist"),),
+            name_keywords=("vihara", "monastery", "buddhist"),
+            dwell_min=30, kind="worship",
+            synonyms=("buddhist temple", "buddhist", "vihara", "monastery", "pagoda"),
+        ),
+        CategoryDef(
+            "hindu_temple", "Hindu temple", "🛕",
+            (_worship("hindu"),),
+            name_keywords=("kovil", "koil", "mandir"),
+            dwell_min=30, kind="worship",
+            synonyms=("hindu temple", "hindu", "kovil", "koil", "mandir"),
+        ),
+        CategoryDef(
+            "taoist_temple", "Taoist / Chinese temple", "☯️",
+            (_worship("taoist", "chinese_folk"),),
+            dwell_min=30, kind="worship",
+            synonyms=("taoist temple", "taoist", "chinese temple", "joss sticks"),
+        ),
+        CategoryDef(
+            "gurdwara", "Gurdwara", "☬",
+            (_worship("sikh"),),
+            name_keywords=("gurdwara", "gurudwara"),
+            dwell_min=45, kind="worship",
+            synonyms=("gurdwara", "gurudwara", "sikh temple", "sikh"),
+        ),
+        CategoryDef(
+            "synagogue", "Synagogue", "🕍",
+            (_worship("jewish"),),
+            name_keywords=("synagogue",),
+            dwell_min=45, kind="worship",
+            synonyms=("synagogue", "shul"),
+        ),
         CategoryDef(
             "mosque", "Mosque", "🕌",
             (_MUSLIM_WORSHIP,),
@@ -69,7 +128,7 @@ CATEGORIES: dict[str, CategoryDef] = {
             synonyms=("mosque", "masjid", "jumaah", "jummah", "friday prayer"),
         ),
         CategoryDef(
-            "prayer_room", "Prayer room / surau", "🕌",
+            "prayer_room", "Surau / Muslim prayer room", "🕌",
             (_MUSLIM_WORSHIP,),
             name_keywords=("surau", "musolla", "musalla", "musollah", "prayer room"),
             dwell_min=20, kind="prayer",
@@ -207,6 +266,74 @@ HALAL_BRAND_HINTS = ("mcdonald", "kfc", "burger king", "subway", "old chang kee"
                      "swensen", "the soup spoon", "encik tan", "jollibee", "texas chicken",
                      "a&w", "stuff'd", "nando")
 
+# --------------------------------------------------------------- cuisines --
+
+
+@dataclass(frozen=True)
+class CuisineDef:
+    key: str
+    label: str
+    osm: tuple[str, ...]       # OSM cuisine=* values: strong evidence
+    names: tuple[str, ...]     # place-name hints: weak evidence
+    synonyms: tuple[str, ...]  # words the rules parser recognises
+
+
+CUISINES: dict[str, CuisineDef] = {
+    c.key: c
+    for c in [
+        # pizza chains are tagged cuisine=pizza; "Italian restaurant" shouldn't mean Domino's
+        CuisineDef("italian", "Italian", ("italian", "pasta", "italian_pizza"),
+                   ("italian", "trattoria", "pizzeria", "osteria", "ristorante", "pasta"),
+                   ("italian", "pasta", "trattoria")),
+        CuisineDef("pizza", "Pizza", ("pizza", "italian_pizza"), ("pizza", "pizzeria"), ("pizza", "pizzeria")),
+        CuisineDef("japanese", "Japanese", ("japanese", "sushi", "ramen", "udon", "soba", "teppanyaki", "yakitori",
+                                            "tempura", "izakaya", "beef_bowl", "donburi", "tonkatsu"),
+                   ("japanese", "sushi", "ramen", "izakaya", "udon", "donburi", "yakitori", "tempura", "katsu"),
+                   ("japanese", "sushi", "ramen", "udon", "izakaya", "katsu")),
+        CuisineDef("chinese", "Chinese", ("chinese", "cantonese", "hongkong", "dim_sum", "hotpot", "hot_pot",
+                                          "szechuan", "sichuan", "teochew", "hainanese", "hakka", "shanghainese",
+                                          "taiwanese"),
+                   ("dim sum", "hotpot", "hot pot", "zi char", "tze char", "chinese"),
+                   ("chinese", "dim sum", "hotpot", "hot pot", "zi char", "tze char", "cantonese", "sichuan",
+                    "szechuan")),
+        CuisineDef("korean", "Korean", ("korean",), ("korean", "kbbq", "bibimbap", "kimchi"),
+                   ("korean", "kbbq", "korean bbq", "bibimbap")),
+        CuisineDef("indian", "Indian", ("indian", "indian_muslim", "north_indian", "south_indian", "curry",
+                                        "biryani"),
+                   ("indian", "curry", "briyani", "biryani", "tandoor", "masala", "dosa", "thosai", "prata"),
+                   ("indian", "curry", "prata", "briyani", "biryani", "dosa", "thosai", "naan")),
+        CuisineDef("thai", "Thai", ("thai",), ("thai", "tom yum"), ("thai", "tom yum", "pad thai")),
+        CuisineDef("vietnamese", "Vietnamese", ("vietnamese",), ("vietnamese", "pho", "banh mi"),
+                   ("vietnamese", "pho", "banh mi")),
+        CuisineDef("malay", "Malay / Indonesian", ("malay", "indonesian", "nasi_padang", "malaysian"),
+                   ("nasi", "padang", "warung", "penyet"),
+                   ("malay", "indonesian", "nasi lemak", "nasi padang", "ayam penyet")),
+        CuisineDef("local", "Local (Singaporean)", ("local", "singaporean", "peranakan", "hainanese"),
+                   ("chicken rice", "laksa", "kopitiam", "peranakan", "nonya"),
+                   ("local food", "singaporean", "chicken rice", "laksa", "peranakan", "nonya")),
+        CuisineDef("western", "Western", ("western", "american", "steak_house", "burger", "grill",
+                                          "fish_and_chips", "diner"),
+                   ("western", "steak", "grill", "burger", "diner"),
+                   ("western", "steak", "steakhouse", "burger", "burgers", "fish and chips")),
+        CuisineDef("french", "French", ("french", "crepe"), ("french", "bistro", "brasserie", "crepe", "crêpe"),
+                   ("french", "bistro", "crepes")),
+        CuisineDef("mexican", "Mexican", ("mexican", "tex-mex", "tacos", "burrito"),
+                   ("mexican", "taco", "tacos", "burrito", "cantina"), ("mexican", "taco", "tacos", "burrito")),
+        CuisineDef("middle_eastern", "Middle Eastern / Mediterranean",
+                   ("middle_eastern", "turkish", "lebanese", "arab", "persian", "kebab", "mediterranean", "greek"),
+                   ("kebab", "shawarma", "turkish", "lebanese", "falafel", "mediterranean"),
+                   ("middle eastern", "turkish", "lebanese", "kebab", "shawarma", "falafel", "mediterranean",
+                    "greek")),
+        CuisineDef("seafood", "Seafood", ("seafood",), ("seafood", "crab", "oyster"),
+                   ("seafood", "chilli crab", "crab", "oysters")),
+        CuisineDef("spanish", "Spanish", ("spanish", "tapas"), ("tapas", "paella", "spanish"),
+                   ("spanish", "tapas", "paella")),
+    ]
+}
+CUISINE_KEYS: tuple[str, ...] = tuple(CUISINES)
+# kinds where a cuisine filter makes sense
+CUISINE_KINDS = ("meal",)
+
 NOT_PRAYER_HINTS = ("keramat", "makam", "tomb", "shrine", "cemetery", "kubur")
 
 VEG_NAME_HINTS = ("vegetarian", "veggie", "vegan", "loving hut", "greendot", "su shi")
@@ -262,4 +389,11 @@ def name_match_allowed(cat: CategoryDef, tags: dict[str, str]) -> bool:
         return "shop" in tags
     if cat.kind == "prayer":
         return tags.get("religion") in (None, "muslim")
+    if cat.kind == "worship":
+        # "Temple Street Cafe" is not a temple: a name hint needs a place of worship
+        # of a matching (or unknown) religion
+        religions = {r for f in cat.filters for r in f.get("religion", ())}
+        return (tags.get("amenity") == "place_of_worship"
+                or tags.get("building") in ("church", "chapel", "cathedral", "temple", "synagogue")) \
+            and tags.get("religion") in (None, *religions)
     return True

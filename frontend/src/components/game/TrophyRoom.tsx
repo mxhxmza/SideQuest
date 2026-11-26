@@ -20,7 +20,7 @@ export default function TrophyRoom({ open, onClose, stats, onReset }: Props) {
   }, [open, onClose]);
   if (!open) return null;
   const lv = levelOf(stats.xp);
-  const got = Object.keys(stats.badges).length;
+  const got = BADGES.filter((b) => stats.badges[b.id]).length;
 
   return (
     <div className="fixed inset-0 z-[65] flex animate-fade-in items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>

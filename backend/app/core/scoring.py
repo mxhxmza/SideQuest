@@ -67,6 +67,34 @@ def dietary_evidence(tags: dict[str, str], dietary: list[str]) -> tuple[bool, li
     return True, evidence, any_weak_only
 
 
+def cuisine_evidence(tags: dict[str, str], cuisines: list[str]) -> tuple[bool, list[Evidence], bool]:
+    """Return (eligible, evidence, only_weak) for a cuisine request ("Italian dinner").
+    Any requested cuisine may match; OSM cuisine=* is strong, a name hint ("Pizzeria …")
+    weak. A place with neither is ineligible."""
+    if not cuisines:
+        return True, [], False
+    vals = [c.strip().lower() for c in (tags.get("cuisine") or "").split(";") if c.strip()]
+    name = tags.get("name")
+    strong: list[Evidence] = []
+    weak: list[Evidence] = []
+    for key in cuisines:
+        cd = T.CUISINES.get(key)
+        if cd is None:
+            continue
+        hit = next((v for v in vals if v in cd.osm), None)
+        if hit:
+            strong.append(Evidence(text=f"OSM cuisine={hit}"))
+            continue
+        hit = next((h for h in cd.names if T.matches_name(name, (h,))), None)
+        if hit:
+            weak.append(Evidence(text=f"name contains '{hit}'", strength="weak"))
+    if strong:
+        return True, strong, False
+    if weak:
+        return True, weak, True
+    return False, [], False
+
+
 def category_evidence(cat: T.CategoryDef, tags: dict[str, str],
                       name_keywords=None) -> tuple[bool, list[Evidence]]:
     """Does the place match the category? Tag match = strong; name hint only = weak.

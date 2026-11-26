@@ -125,3 +125,47 @@ def test_prayer_until(text, value, until):
     s = parse(text)
     assert len(s) == 1
     assert (s[0].time_window.type, s[0].time_window.value, s[0].time_window.until) == ("prayer", value, until)
+
+
+def test_worship_and_cuisine_requests_for_everyone():
+    from datetime import datetime, timedelta, timezone
+    from app.models import ParseContext
+    from app.providers.llm.rules import RulesParser
+    ctx = ParseContext(departure_time=datetime(2026, 11, 26, 15, 55, tzinfo=timezone(timedelta(hours=8))))
+    got = lambda t: [(s.category, s.constraints.dietary, s.constraints.cuisine) for s in RulesParser().parse(t, ctx)]
+    assert got("church before 10am, then Italian dinner") == [("church", [], []), ("meal", [], ["italian"])]
+    assert got("Hindu temple and a vegetarian lunch") == [("hindu_temple", [], []), ("meal", ["vegetarian"], [])]
+    assert got("buddhist temple, gurdwara, synagogue") == [("buddhist_temple", [], []), ("gurdwara", [], []),
+                                                           ("synagogue", [], [])]
+    assert got("chinese temple then dim sum") == [("taoist_temple", [], []), ("meal", [], ["chinese"])]
+    # a bare cuisine is a food stop; it merges only into a food clause
+    assert got("petrol, pizza") == [("petrol", [], []), ("meal", [], ["pizza"])]
+    assert got("dinner at 7pm, japanese") == [("meal", [], ["japanese"])]
+    assert got("mosque at Asr, then a halal restaurant") == [("mosque", [], []), ("meal", ["halal"], [])]
+
+
+# The landing page's "Ask for anything" chips (frontend/src/components/landing/AskAnything.tsx)
+LANDING_CHIPS = [
+    ("church before 10am", "church", None), ("Hindu temple", "hindu_temple", None),
+    ("Buddhist temple", "buddhist_temple", None), ("Chinese temple", "taoist_temple", None),
+    ("mosque at Asr", "mosque", None), ("surau", "prayer_room", None), ("gurdwara", "gurdwara", None),
+    ("synagogue", "synagogue", None), ("temple", "temple", None),
+    ("Italian dinner", "meal", "italian"), ("pizza", "meal", "pizza"), ("sushi", "meal", "japanese"),
+    ("dim sum", "meal", "chinese"),
+    ("Indian lunch", "meal", "indian"), ("Korean BBQ", "meal", "korean"), ("Thai food", "meal", "thai"),
+    ("pho", "meal", "vietnamese"), ("nasi padang", "meal", "malay"), ("chicken rice", "meal", "local"),
+    ("burger", "meal", "western"), ("French bistro", "meal", "french"), ("tacos", "meal", "mexican"),
+    ("kebab", "meal", "middle_eastern"), ("seafood dinner", "meal", "seafood"), ("tapas", "meal", "spanish"),
+    ("bubble tea", "cafe", None), ("7-eleven", "convenience", None), ("groceries", "supermarket", None),
+    ("flowers", "florist", None), ("durian", "keyword", None), ("bike shop", "keyword", None),
+]
+
+
+@pytest.mark.parametrize("text,category,cuisine", LANDING_CHIPS)
+def test_landing_page_chips_parse(text, category, cuisine):
+    from datetime import datetime, timedelta, timezone
+    from app.models import ParseContext
+    from app.providers.llm.rules import RulesParser
+    ctx = ParseContext(departure_time=datetime(2026, 11, 26, 15, 55, tzinfo=timezone(timedelta(hours=8))))
+    (s,) = RulesParser().parse(text, ctx)
+    assert s.category == category and s.constraints.cuisine == ([cuisine] if cuisine else [])

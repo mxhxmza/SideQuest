@@ -5,22 +5,23 @@ import Architecture from "../components/landing/Architecture";
 import HeroMap from "../components/landing/HeroMap";
 import PromptDemo from "../components/landing/PromptDemo";
 import ScoreDemo, { RULES } from "../components/landing/ScoreDemo";
+import AskAnything from "../components/landing/AskAnything";
 import { BADGES } from "../lib/game";
 import { linkTo } from "../lib/router";
 import { useRevealAll, useSeen } from "../lib/useReveal";
 
 const STEPS = [
   { icon: "📍", title: "Set start & finish", body: "Pick where you're leaving from and where you're headed — any address, MRT station or landmark in Singapore." },
-  { icon: "📜", title: "Type your side quests", body: "Write it like a text: “mosque at Asar, halal ice cream, petrol”. Watch it turn into a quest log as you type." },
+  { icon: "📜", title: "Type your side quests", body: "Write it like a text: “church before 10am, Italian dinner, petrol”. Watch it turn into a quest log as you type." },
   { icon: "🧭", title: "Get the best stops", body: "For every quest, places along the way ranked by the extra minutes they add — checked against real routing." },
   { icon: "⭐", title: "Earn stars, then go", body: "Low detours earn stars and XP. Tap once to open the whole trip in Google Maps." },
 ];
 
 const POWERUPS = [
-  { icon: "🕌", title: "Prayer-aware", body: "MUIS prayer times along your route. See where you'll be when Asar begins and land a mosque inside the window.", tint: "from-amber-300/25" },
+  { icon: "🙏", title: "Every faith welcome", body: "Churches, temples, mosques, gurdwaras, synagogues. Ask for a mosque and Muslim prayer times join the plan too.", tint: "from-amber-300/25" },
   { icon: "⏱️", title: "Minutes, not kilometres", body: "Every option shows how many minutes it adds to your trip — the number that actually matters.", tint: "from-brand-300/25" },
   { icon: "🕐", title: "Open when you arrive", body: "Opening hours are checked at your ETA, not right now. A café that closes before you get there loses.", tint: "from-cyan-300/25" },
-  { icon: "🥘", title: "Halal · veg · vegan", body: "Dietary tags from OpenStreetMap. Weak hints are flagged and never passed off as certified.", tint: "from-emerald-300/25" },
+  { icon: "🍝", title: "Any cuisine, any diet", body: "Italian, Japanese, Indian, Korean and more — plus halal, vegetarian or vegan. Weak hints are flagged, never passed off as certified.", tint: "from-emerald-300/25" },
   { icon: "⚡", title: "Combo stops", body: "Two quests in the same mall or shop merge into one stop — zero extra minutes.", tint: "from-violet-300/25" },
   { icon: "📌", title: "Pin & re-plan", body: "Prefer the second option? Pin it and the rest of the trip re-plans around your choice.", tint: "from-pink-300/25" },
   { icon: "🚇", title: "Four ways to travel", body: "Drive, public transport, walk or cycle. Transit shows where to hop off for each stop.", tint: "from-sky-300/25" },
@@ -49,7 +50,7 @@ const STACK = [
 ];
 
 const GLITCHES = [
-  ["🥘", "Halal tags are sparse in OpenStreetMap, and MUIS certification isn't there at all — places without evidence are labelled “unverified”."],
+  ["🥗", "Cuisine and dietary tags are patchy in OpenStreetMap, and certifications (like halal) aren't there at all — weak matches are flagged and unproven ones labelled “unverified”."],
   ["🕐", "Many places have no opening hours mapped, so “hours unknown” shows up a lot (and costs 3 points)."],
   ["🚇", "Google Maps won't take waypoints for public transport, so transit trips get one link per leg."],
   ["😴", "The free server sleeps when idle — the first plan of the day can take about a minute."],
@@ -106,6 +107,9 @@ export default function Landing() {
             <Logo />
           </a>
           <div className="hidden items-center gap-6 font-display text-sm font-medium text-slate-300 md:flex">
+            <a href="#ask" className="transition hover:text-white">
+              What to ask
+            </a>
             <a href="#how" className="transition hover:text-white">
               How to play
             </a>
@@ -144,19 +148,19 @@ export default function Landing() {
               Turn errands into <span className="text-gradient">side quests</span>
             </h1>
             <p className="mx-auto mt-5 max-w-xl animate-fade-up text-lg leading-relaxed text-slate-300 lg:mx-0" style={{ animationDelay: "160ms" }}>
-              Say where you're going and what you need on the way — a mosque at Asar, halal ice cream, petrol. SideQuest finds the stops that add the{" "}
-              <b className="text-white">fewest minutes</b> to your trip, then hands the route to Google Maps.
+              Say where you're going and what you need on the way — a church before 10am, Italian dinner, petrol, a pharmacy. SideQuest finds the stops
+              that add the <b className="text-white">fewest minutes</b> to your trip, then hands the route to Google Maps.
             </p>
             <div className="mt-8 flex animate-fade-up flex-wrap items-center justify-center gap-4 lg:justify-start" style={{ animationDelay: "240ms" }}>
               <PlayButton big />
-              <a href="#how" className="btn-ghost px-5 py-3.5 font-display font-semibold tracking-wide">
-                How it works ↓
+              <a href="#ask" className="btn-ghost px-5 py-3.5 font-display font-semibold tracking-wide">
+                What can I ask? ↓
               </a>
             </div>
             <dl className="mt-10 grid animate-fade-up grid-cols-3 gap-3 text-center lg:max-w-md" style={{ animationDelay: "320ms" }}>
               {[
                 [poiCount ? `${Math.round(poiCount / 1000)}k` : "OSM", poiCount ? "places mapped" : "places data"],
-                ["5", "daily prayers"],
+                ["16", "cuisines"],
                 ["$0", "to run"],
               ].map(([v, l]) => (
                 <div key={l} className="rounded-2xl bg-white/[0.04] px-2 py-3 ring-1 ring-white/10">
@@ -186,8 +190,9 @@ export default function Landing() {
             <p className="font-display text-xs font-semibold uppercase tracking-[0.3em] text-brand-300">No forms. Just type.</p>
             <h2 className="mt-2 font-logo text-3xl leading-tight text-white sm:text-4xl">It understands your quest log</h2>
             <p className="mt-4 text-slate-300">
-              Times (“around 1pm”, “45 min in”, “at Asar”), diets (“halal”, “vegetarian”), and 20+ kinds of places — mosques, hawker centres, petrol, ATMs,
-              pharmacies, toilets and more. Anything it doesn't recognise becomes a name search, and you're told about it instead of it silently vanishing.
+              Places of worship for every faith, 16 cuisines, diets (“halal”, “vegetarian”, “vegan”), errands from petrol to pharmacies, and times (“around
+              1pm”, “before 10am”, “45 min in”). Anything it doesn't recognise becomes a name search, and you're told about it instead of it silently
+              vanishing.
             </p>
             <ul className="mt-5 space-y-2 text-sm text-slate-300">
               {["Parses live as you type — tap any quest to tweak it", "Works without an AI model; plug in a local LLM if you like", "Every quest gets its own time window on your route"].map(
@@ -204,6 +209,14 @@ export default function Landing() {
             <PromptDemo active={demoSeen} />
           </div>
         </div>
+      </section>
+
+      {/* ask for anything */}
+      <section id="ask" className="relative scroll-mt-20 px-4 py-20 sm:px-6">
+        <SectionTitle kicker="For everyone" title="Ask for anything on the way">
+          A church before work, a Hindu temple and a vegetarian lunch, sushi after the gym, or just petrol and an ATM. Tap any chip to try it.
+        </SectionTitle>
+        <AskAnything />
       </section>
 
       {/* how to play */}
@@ -229,7 +242,7 @@ export default function Landing() {
       {/* power-ups */}
       <section id="powerups" className="relative scroll-mt-20 px-4 py-20 sm:px-6">
         <SectionTitle kicker="Power-ups" title="What it knows that a map app doesn't">
-          Built for real Singapore errands — prayer times, opening hours and dietary needs are part of the plan, not an afterthought.
+          Built for real Singapore errands — places of worship, cuisines, opening hours and dietary needs are part of the plan, not an afterthought.
         </SectionTitle>
         <div className="mx-auto grid max-w-6xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {POWERUPS.map((p, i) => (
@@ -270,7 +283,7 @@ export default function Landing() {
         <div className="mx-auto grid max-w-6xl items-start gap-8 lg:grid-cols-[1.2fr_1fr]">
           <div className="reveal">
             <p className="mb-3 font-display text-sm font-semibold text-slate-300">
-              Example: <span className="text-white">“halal ice cream”</span> — three candidates
+              Example: <span className="text-white">“Italian dinner”</span> — three candidates
             </p>
             <ScoreDemo />
             <p className="mt-3 text-xs text-slate-500">Illustrative places; the penalty values are the ones the planner uses.</p>
@@ -370,9 +383,9 @@ export default function Landing() {
           <a className="underline hover:text-slate-300" href="https://openfreemap.org" target="_blank" rel="noopener noreferrer">
             OpenFreeMap
           </a>{" "}
-          · Routing &amp; search by OneMap (SLA) · Prayer times computed with the MUIS method
+          · Routing &amp; search by OneMap (SLA) · Muslim prayer times by the MUIS method
         </p>
-        <p className="mt-2">SideQuest never claims halal certification — check MUIS on site.</p>
+        <p className="mt-2">Cuisine and dietary tags come from OpenStreetMap and aren't certifications — check on site.</p>
       </footer>
     </div>
   );

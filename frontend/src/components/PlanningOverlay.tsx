@@ -8,7 +8,9 @@ const STEPS = [
 ];
 
 const TIPS = [
-  "Say “halal” and only places tagged halal are picked when any exist.",
+  "Say “Italian”, “sushi” or “dim sum” and only matching restaurants are picked.",
+  "Add “halal”, “vegetarian” or “vegan” to any food stop.",
+  "Churches, temples, mosques, gurdwaras — just name the place of worship.",
   "Tap a checkpoint to see the other options — and why they rank lower.",
   "Two quests in the same mall cost zero extra minutes. That's a combo!",
   "“coffee 45 min in” times a stop by trip progress, not the clock.",

@@ -279,3 +279,51 @@ def test_dietary_fallback_ignores_evidenced_places_out_of_reach():
     assert [c.name for c in sp.candidates] == ["Route Bakery"]
     assert any("no halal evidence" in e.text for e in sp.chosen.evidence)
     assert any("unverified" in w for w in sp.warnings)
+
+
+def test_cuisine_filters_restaurants_and_flags_name_only_matches():
+    from app.models import Place
+    near = ORIGIN[0] + 0.001
+    places = make_places() + [
+        Place(id=70, osm_id="n70", name="Noodle House", lat=near, lng=lng_at_km(5),
+              tags={"amenity": "restaurant", "cuisine": "chinese", "name": "Noodle House"}),
+        Place(id=71, osm_id="n71", name="Trattoria Uno", lat=near, lng=lng_at_km(12),
+              tags={"amenity": "restaurant", "cuisine": "italian", "name": "Trattoria Uno"}),
+        Place(id=72, osm_id="n72", name="Pizzeria Due", lat=near, lng=lng_at_km(14),
+              tags={"amenity": "restaurant", "name": "Pizzeria Due"}),
+    ]
+    pl = Planner(StraightRouting(), FakePlaces(places), get_region("singapore"))
+    s = StopRequest(id="s1", category="meal", constraints=StopConstraints(cuisine=["italian"]))
+    sp = pl.plan(trip(stops=[s])).stops[0]
+    names = [c.name for c in sp.candidates]
+    assert "Noodle House" not in names and {"Trattoria Uno", "Pizzeria Due"} <= set(names)
+    tagged = next(c for c in sp.candidates if c.name == "Trattoria Uno")
+    by_name = next(c for c in sp.candidates if c.name == "Pizzeria Due")
+    assert any(e.text == "OSM cuisine=italian" for e in tagged.evidence)
+    assert "name_hint_only" in by_name.score_breakdown and "name_hint_only" not in tagged.score_breakdown
+
+
+def test_cuisine_with_no_match_warns_by_name():
+    s = StopRequest(id="s1", category="meal", constraints=StopConstraints(cuisine=["mexican"]))
+    sp = Planner(StraightRouting(), FakePlaces(make_places()), get_region("singapore")).plan(trip(stops=[s])).stops[0]
+    assert sp.chosen is None and any("No Mexican places" in w for w in sp.warnings)
+
+
+def test_worship_categories_match_religion_not_street_names():
+    from app.models import Place
+    near = ORIGIN[0] + 0.001
+    places = make_places() + [
+        Place(id=80, osm_id="n80", name="St Mary's Church", lat=near, lng=lng_at_km(8),
+              tags={"amenity": "place_of_worship", "religion": "christian", "name": "St Mary's Church"}),
+        Place(id=81, osm_id="n81", name="Sri Murugan Temple", lat=near, lng=lng_at_km(9),
+              tags={"amenity": "place_of_worship", "religion": "hindu", "name": "Sri Murugan Temple"}),
+        Place(id=82, osm_id="n82", name="Temple Street Cafe", lat=near, lng=lng_at_km(10),
+              tags={"amenity": "cafe", "name": "Temple Street Cafe"}),
+    ]
+    pl = Planner(StraightRouting(), FakePlaces(places), get_region("singapore"))
+    plan = pl.plan(trip(stops=[StopRequest(id="s1", category="church"), StopRequest(id="s2", category="temple"),
+                               StopRequest(id="s3", category="hindu_temple")]))
+    assert by_id(plan, "s1").chosen.name == "St Mary's Church"
+    temple_names = [c.name for c in by_id(plan, "s2").candidates]
+    assert "Sri Murugan Temple" in temple_names and "Temple Street Cafe" not in temple_names
+    assert by_id(plan, "s3").chosen.name == "Sri Murugan Temple"
