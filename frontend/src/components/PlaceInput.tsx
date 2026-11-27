@@ -12,9 +12,11 @@ interface Props {
   allowLocate?: boolean;
   /** coloured A/B marker inside the field; label becomes screen-reader only */
   dot?: "origin" | "dest";
+  /** the open suggestion list and its highlighted entry, for the map to preview; null once it closes */
+  onPreview?: (p: { results: GeocodeResult[]; active: number } | null) => void;
 }
 
-export default function PlaceInput({ label, value, onChange, onText, placeholder, allowLocate, dot }: Props) {
+export default function PlaceInput({ label, value, onChange, onText, placeholder, allowLocate, dot, onPreview }: Props) {
   const [text, setText] = useState(value?.name ?? "");
   const [results, setResults] = useState<GeocodeResult[]>([]);
   const [open, setOpen] = useState(false);
@@ -34,6 +36,14 @@ export default function PlaceInput({ label, value, onChange, onText, placeholder
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
+
+  useEffect(() => {
+    onPreview?.(open && results.length ? { results, active } : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, results, active]);
+  // the form hides once a plan shows: take the preview off the map with it
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => () => onPreview?.(null), []);
 
   const pick = (r: GeocodeResult) => {
     typed.current = false;

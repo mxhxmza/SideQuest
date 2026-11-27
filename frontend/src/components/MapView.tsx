@@ -1,7 +1,7 @@
 import maplibregl, { type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef } from "react";
-import type { Point, TripPlan } from "../types";
+import type { PlacePreview, Point, TripPlan } from "../types";
 import { addedMin, fmtTime, PRAYER_LABEL } from "../lib/format";
 
 const STYLE = "https://tiles.openfreemap.org/styles/fiord";
@@ -83,6 +83,8 @@ interface Props {
   onPickCandidate?: (stopId: string, osmId: string) => void;
   /** px of map covered by the floating panel on the left (desktop) */
   padLeft?: number;
+  /** suggestions for the Start / Finish box being typed in */
+  preview?: PlacePreview | null;
 }
 
 type Feature = GeoJSON.Feature<GeoJSON.LineString, { mode: string; color: string }>;
@@ -109,6 +111,7 @@ export default function MapView({
   onSelectStop,
   onPickCandidate,
   padLeft = 0,
+  preview = null,
 }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -203,6 +206,48 @@ export default function MapView({
     };
   }, []);
 
+  // the latest props, for camera moves that start outside the draw effect (a search closing)
+  const latest = useRef({ plan, origin, destination, padLeft });
+  latest.current = { plan, origin, destination, padLeft };
+
+  /** Frame the trip, leaving room for the floating panel: the route, or A and B, or the one
+   *  place picked so far (zoomed in, like a maps app). `home`: with nothing picked, go back
+   *  to the Singapore overview (a search closed without a pick). */
+  const fitView = (home = false) => {
+    const m = map.current;
+    if (!m) return;
+    const { plan, origin, destination, padLeft } = latest.current;
+    const duration = reducedMotion() ? 0 : 1100;
+    const pts: LngLat[] = [];
+    if (plan) pts.push(...plan.route.geometry);
+    if (origin) pts.push([origin.lng, origin.lat]);
+    if (destination) pts.push([destination.lng, destination.lat]);
+    const padding = { top: 70, bottom: 60, left: padLeft + 50, right: 70 };
+    // single points use `offset`, never `padding`: padding on flyTo/easeTo sticks to the map,
+    // and the next fitBounds adds its own on top — the route then fits into a ~40 px strip
+    const offset: [number, number] = [(padding.left - padding.right) / 2, (padding.top - padding.bottom) / 2];
+    if (pts.length >= 2) {
+      let [minX, minY, maxX, maxY] = [180, 90, -180, -90];
+      for (const [x, y] of pts) {
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+      m.fitBounds(
+        [
+          [minX, minY],
+          [maxX, maxY],
+        ],
+        { padding, maxZoom: 15, duration },
+      );
+    } else if (pts.length === 1) {
+      m.flyTo({ center: pts[0], zoom: 15, offset, duration });
+    } else if (home) {
+      m.flyTo({ center: SG_CENTER, zoom: 10.6, offset: [padLeft / 2, 0], duration });
+    }
+  };
+
   // route + main markers
   useEffect(() => {
     const m = map.current;
@@ -270,42 +315,78 @@ export default function MapView({
           add(c.lng, c.lat, node, () => onSelectStop(sp.request.id));
         });
       }
-      // fit, leaving room for the floating panel
-      const pts: [number, number][] = [];
-      if (plan) pts.push(...plan.route.geometry);
-      if (origin) pts.push([origin.lng, origin.lat]);
-      if (destination) pts.push([destination.lng, destination.lat]);
-      const padding = { top: 70, bottom: 60, left: padLeft + 50, right: 70 };
-      if (pts.length >= 2) {
-        let [minX, minY, maxX, maxY] = [180, 90, -180, -90];
-        for (const [x, y] of pts) {
-          minX = Math.min(minX, x);
-          minY = Math.min(minY, y);
-          maxX = Math.max(maxX, x);
-          maxY = Math.max(maxY, y);
-        }
-        m.fitBounds(
-          [
-            [minX, minY],
-            [maxX, maxY],
-          ],
-          { padding, maxZoom: 15, duration: reducedMotion() ? 0 : 1100 },
-        );
-      } else if (pts.length === 1) {
-        // `offset`, not `padding`: padding on flyTo/easeTo sticks to the map, and the next
-        // fitBounds adds its own padding on top — the route then fits into a ~40 px strip
-        m.flyTo({
-          center: pts[0],
-          zoom: 13,
-          offset: [(padding.left - padding.right) / 2, (padding.top - padding.bottom) / 2],
-          duration: reducedMotion() ? 0 : 1100,
-        });
-      }
+      fitView();
     };
     if (ready.current) draw();
     else pending.current = draw;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan, origin, destination, padLeft]);
+
+  // Typing a Start / Finish, like a maps app's search box: every suggestion is a dot, the
+  // highlighted one a big A / 🏁 pin with its name, and the camera flies to it — zooming out
+  // and back in for far jumps. When the list closes the map frames the trip again (a pick
+  // also redraws above; both land on the same view).
+  const previewMarkers = useRef<maplibregl.Marker[]>([]);
+  const previewNodes = useRef<HTMLElement[]>([]);
+  const previewing = useRef(false);
+  const camTimer = useRef<number | undefined>(undefined);
+  const pResults = preview?.results;
+  const pKind = preview?.kind;
+  const pActive = preview?.active ?? 0;
+
+  // markers: rebuilt only when the suggestions change, so moving the highlight doesn't re-pop them
+  useEffect(() => {
+    const m = map.current;
+    previewMarkers.current.forEach((mk) => mk.remove());
+    previewMarkers.current = [];
+    previewNodes.current = [];
+    if (!m) return;
+    if (!pResults?.length || !pKind) {
+      window.clearTimeout(camTimer.current);
+      if (previewing.current) {
+        previewing.current = false;
+        fitView(true);
+      }
+      return;
+    }
+    previewing.current = true;
+    for (const r of pResults) {
+      const node = el(
+        `preview-pin preview-${pKind}`,
+        `<span class="preview-glyph">${pKind === "origin" ? "A" : "🏁"}</span><span class="preview-label">${esc(r.name)}</span>`,
+        r.name,
+      );
+      const wrap = document.createElement("div");
+      wrap.appendChild(node);
+      previewNodes.current.push(node);
+      previewMarkers.current.push(new maplibregl.Marker({ element: wrap }).setLngLat([r.lng, r.lat]).addTo(m));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pResults, pKind]);
+
+  // highlight + camera follow the highlighted suggestion
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !pResults?.length) return;
+    const i = Math.min(pActive, pResults.length - 1);
+    previewNodes.current.forEach((n, k) => {
+      n.classList.toggle("preview-active", k === i);
+      if (n.parentElement) n.parentElement.style.zIndex = k === i ? "3" : "1";
+    });
+    const r = pResults[i];
+    window.clearTimeout(camTimer.current);
+    // a short pause, so skimming the list with the mouse doesn't send the camera everywhere
+    camTimer.current = window.setTimeout(() => {
+      m.flyTo({
+        center: [r.lng, r.lat],
+        zoom: 15,
+        offset: [latest.current.padLeft / 2, 0],
+        ...(reducedMotion() ? { duration: 0 } : { speed: 1.6, maxDuration: 1600 }),
+      });
+    }, 140);
+    // a pending move must not land after the list closed (it would undo the re-frame)
+    return () => window.clearTimeout(camTimer.current);
+  }, [pResults, pActive]);
 
   // prayer-time markers: the plan only has them when the trip asked for a mosque or surau
   useEffect(() => {

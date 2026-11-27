@@ -144,6 +144,14 @@ export interface GeocodeResult {
   source: string;
 }
 
+/** The suggestion list open under the Start or Finish box, previewed on the map. */
+export interface PlacePreview {
+  kind: "origin" | "dest";
+  results: GeocodeResult[];
+  /** the highlighted suggestion (arrow keys / mouse) */
+  active: number;
+}
+
 export interface Category {
   key: string;
   label: string;

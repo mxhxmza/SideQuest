@@ -19,7 +19,7 @@ import { linkTo } from "../lib/router";
 import { sfx } from "../lib/sfx";
 import { useGame } from "../lib/useGame";
 import Logo from "../components/Logo";
-import type { Category, Cuisine, Health, Mode, Point, StopRequest, TripPlan } from "../types";
+import type { Category, Cuisine, Health, Mode, PlacePreview, Point, StopRequest, TripPlan } from "../types";
 
 type ServerState = "checking" | "waking" | "ok" | "down";
 
@@ -73,6 +73,14 @@ export default function Planner() {
   const [burst, setBurst] = useState(0);
   const resultsRef = useRef<HTMLDivElement>(null);
   const desktop = useMediaQuery("(min-width: 1024px)");
+  // suggestions under the Start / Finish box, shown on the map while typing
+  const [preview, setPreview] = useState<PlacePreview | null>(null);
+  const previewFor = (kind: PlacePreview["kind"]) => (p: Omit<PlacePreview, "kind"> | null) =>
+    setPreview((cur) => (p ? { kind, ...p } : cur?.kind === kind ? null : cur));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const previewOrigin = useCallback(previewFor("origin"), []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const previewDest = useCallback(previewFor("dest"), []);
   const game = useGame();
 
   // wake the (possibly sleeping) backend on load — free hosting cold starts take ~1 min
@@ -268,6 +276,7 @@ export default function Planner() {
           onSelectStop={setSelected}
           onPickCandidate={pin}
           padLeft={desktop ? 500 : 0}
+          preview={preview}
         />
         {busy && <PlanningOverlay />}
       </div>
@@ -338,6 +347,7 @@ export default function Planner() {
                     value={origin}
                     onChange={setOrigin}
                     onText={setOriginText}
+                    onPreview={previewOrigin}
                     placeholder="Start — e.g. NTU"
                     allowLocate
                   />
@@ -347,6 +357,7 @@ export default function Planner() {
                     value={destination}
                     onChange={setDestination}
                     onText={setDestText}
+                    onPreview={previewDest}
                     placeholder="Finish — e.g. Changi Airport"
                   />
                   <button
