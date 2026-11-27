@@ -227,6 +227,8 @@ export default function MapView({
     // and the next fitBounds adds its own on top — the route then fits into a ~40 px strip
     const offset: [number, number] = [(padding.left - padding.right) / 2, (padding.top - padding.bottom) / 2];
     if (pts.length >= 2) {
+      // any padding left on the map would be added to ours and shrink the route to a dot
+      m.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
       let [minX, minY, maxX, maxY] = [180, 90, -180, -90];
       for (const [x, y] of pts) {
         minX = Math.min(minX, x);
@@ -239,7 +241,8 @@ export default function MapView({
           [minX, minY],
           [maxX, maxY],
         ],
-        { padding, maxZoom: 15, duration },
+        // linear: ease straight onto the route; flyTo's arc zooms out first and can stop there
+        { padding, maxZoom: 15, duration, linear: true },
       );
     } else if (pts.length === 1) {
       m.flyTo({ center: pts[0], zoom: 15, offset, duration });
