@@ -120,10 +120,9 @@ def test_transit_hop_off(planner):
 
 
 def test_origin_outside_region_rejected(planner):
-    from app.providers.base import ProviderError
     t = trip()
     t.origin = Point(lat=3.15, lng=101.7)  # Kuala Lumpur
-    with pytest.raises(ProviderError):
+    with pytest.raises(ValueError):
         planner.plan(t)
 
 
@@ -327,3 +326,32 @@ def test_worship_categories_match_religion_not_street_names():
     temple_names = [c.name for c in by_id(plan, "s2").candidates]
     assert "Sri Murugan Temple" in temple_names and "Temple Street Cafe" not in temple_names
     assert by_id(plan, "s3").chosen.name == "Sri Murugan Temple"
+
+
+def test_prayer_times_only_when_a_mosque_or_prayer_is_requested(planner):
+    from app.core.planner import wants_prayer_times
+    no_mosque = [StopRequest(id="s1", category="church"), StopRequest(id="s2", category="meal",
+                                                                    constraints=StopConstraints(cuisine=["italian"]))]
+    plan = planner.plan(trip(stops=no_mosque))
+    assert plan.prayer_times == [] and all(r.kind != "prayer" for r in plan.timeline)
+    assert planner.plan(trip(stops=[])).prayer_times == []
+    # a mosque, a surau, or any stop timed by a prayer brings them back
+    assert planner.plan(trip(stops=[StopRequest(id="s1", category="mosque")])).prayer_times
+    assert wants_prayer_times([StopRequest(id="s1", category="prayer_room")])
+    assert wants_prayer_times([StopRequest(id="s1", category="cafe",
+                                           time_window=TimeWindow(type="prayer", value="asr"))])
+    assert not wants_prayer_times([StopRequest(id="s1", category="temple"), StopRequest(id="s2", category="atm")])
+
+
+def test_prayer_window_at_the_very_end_offers_mosques_just_before_it(planner):
+    """Regression (Jurong Point → Changi, 15:30, "mosque at Asr"): Asr began 2 min before
+    arrival, no mosque was that close to the end, and the stop came back empty."""
+    from app.core import prayer
+    dhuhr = prayer.day_times(ORIGIN[0], ORIGIN[1], DEP.date())["dhuhr"]
+    base_min = planner.routing.route(ORIGIN, DEST, "drive", DEP).duration_s / 60
+    dep = dhuhr - timedelta(minutes=base_min - 2)
+    s = [StopRequest(id="s1", category="mosque", time_window=TimeWindow(type="prayer", value="dhuhr"))]
+    sp = planner.plan(_trip_at(dep, s)).stops[0]
+    assert sp.chosen is not None and sp.chosen.name == "Masjid Al-Test"
+    assert any("just outside" in w for w in sp.warnings)
+    assert sp.chosen.wait_min > 0  # arriving before Dhuhr: the wait is counted

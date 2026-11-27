@@ -55,3 +55,14 @@ def test_acronym_keeps_provider_order():
     # OneMap knows NTU = the university; a starts-with rule must not bury it
     om = [R("Nanyang Technological University"), R("Ntu Innovation Centre"), R("Ntuc Health (Pasir Ris)")]
     assert [r.name for r in rank_by_name("NTU", om)] == [r.name for r in om]
+
+
+def test_multi_word_query_prefers_names_starting_with_it():
+    from app.models import GeocodeResult
+    from app.providers.geocoding.chain import rank_by_name
+    r = lambda n: GeocodeResult(name=n, address="", lat=1.4, lng=103.9, source="onemap")
+    got = rank_by_name("Punggol MRT", [r("Punggol Coast Mrt Station (Ne18)"), r("Punggol Mrt Station (Ne17)")])
+    assert got[0].name == "Punggol Mrt Station (Ne17)"
+    # one-word queries keep the provider's order unless the name is exact
+    got = rank_by_name("NTU", [r("Nanyang Technological University"), r("NTU Innovation Centre")])
+    assert got[0].name == "Nanyang Technological University"

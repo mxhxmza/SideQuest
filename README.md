@@ -8,8 +8,8 @@ stops (same mall), and a one-tap hand-off to Google Maps.
 It understands 28 place types — places of worship for every faith mapped in Singapore (church, Buddhist, Hindu and
 Taoist temples, gurdwara, synagogue, mosque, surau), food, errands — plus 16 cuisines (Italian, Japanese, Chinese,
 Indian, Korean…), diets (halal, vegetarian, vegan) and times ("around 1pm", "before 10am", "45 min in", "at Asar").
-Anything else becomes a place-name search. Muslim prayer times (MUIS) are placed on the route when the trip has a
-mosque or prayer stop, or when the user switches them on.
+Anything else becomes a place-name search. Muslim prayer times (MUIS) are placed on the route only when the prompt
+asks for a mosque, a surau or a prayer time ("at Asr"); other trips never show them.
 
 The web app has two pages: a landing page at `/` that explains what the app does and how it is built
 (architecture, the 10-stage planning pipeline, provider fallbacks, scoring rules), and the planner at

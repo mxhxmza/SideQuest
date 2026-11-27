@@ -83,8 +83,6 @@ interface Props {
   onPickCandidate?: (stopId: string, osmId: string) => void;
   /** px of map covered by the floating panel on the left (desktop) */
   padLeft?: number;
-  /** Islamic prayer-time markers along the route */
-  showPrayers?: boolean;
 }
 
 type Feature = GeoJSON.Feature<GeoJSON.LineString, { mode: string; color: string }>;
@@ -111,7 +109,6 @@ export default function MapView({
   onSelectStop,
   onPickCandidate,
   padLeft = 0,
-  showPrayers = false,
 }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -303,12 +300,12 @@ export default function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan, origin, destination, padLeft]);
 
-  // prayer-time markers: only when shown (a toggle in the quest log)
+  // prayer-time markers: the plan only has them when the trip asked for a mosque or surau
   useEffect(() => {
     const m = map.current;
     prayerMarkers.current.forEach((mk) => mk.remove());
     prayerMarkers.current = [];
-    if (!m || !plan || !showPrayers) return;
+    if (!m || !plan) return;
     plan.prayer_times.forEach((p, i) => {
       if (!p.position || p.note) return;
       const node = el("prayer-pin", "🕌", `${PRAYER_LABEL[p.name] ?? p.name} begins ${fmtTime(p.time)} — you'll be about here`);
@@ -317,7 +314,7 @@ export default function MapView({
       wrap.appendChild(node);
       prayerMarkers.current.push(new maplibregl.Marker({ element: wrap }).setLngLat([p.position.lng, p.position.lat]).addTo(m));
     });
-  }, [plan, showPrayers]);
+  }, [plan]);
 
   // selected stop: highlight + show alternatives
   useEffect(() => {

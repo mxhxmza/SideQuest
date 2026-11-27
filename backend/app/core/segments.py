@@ -98,9 +98,14 @@ def resolve_window(stop: StopRequest, depart: datetime, arrival: datetime,
         target = depart + timedelta(minutes=float(w.value or 0))
     elif w.type == "clock_time":
         h, mi = parse_hhmm(w.value)
-        target = depart.replace(hour=h, minute=mi, second=0, microsecond=0)
-        if target < depart - timedelta(hours=2):
-            target += timedelta(days=1)
+        today = depart.replace(hour=h, minute=mi, second=0, microsecond=0)
+
+        def gap(t: datetime) -> float:
+            return 0.0 if depart <= t <= arrival else min(abs((t - depart).total_seconds()),
+                                                           abs((t - arrival).total_seconds()))
+        # the occurrence closest to the trip: "dinner" (19:00) on a 23:30 drive means
+        # tonight — eat near the start — not 19:00 tomorrow
+        target = min((today - timedelta(days=1), today, today + timedelta(days=1)), key=gap)
     elif w.type == "prayer":
         name = str(w.value or "").lower()
         p_start, p_end = prayer_lookup(name, depart)
@@ -132,9 +137,13 @@ def resolve_window(stop: StopRequest, depart: datetime, arrival: datetime,
     else:  # pragma: no cover
         return Window(depart, arrival, None)
     if w.relation == "before":
-        return Window(target - 2 * tol, target, target - tol)
+        # "before 10am" = any time up to 10:00: from departure (at most 4 h back), or the
+        # usual slot if departure is later than that
+        start = min(target - 2 * tol, max(depart, target - timedelta(hours=4)))
+        return Window(start, target, start + (target - start) / 2)
     if w.relation == "after":
-        return Window(target, target + 2 * tol, target + tol)
+        end = max(target + 2 * tol, min(arrival, target + timedelta(hours=4)))
+        return Window(target, end, target + (end - target) / 2)
     return Window(target - tol, target + tol, target)
 
 

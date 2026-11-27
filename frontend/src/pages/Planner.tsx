@@ -36,18 +36,6 @@ function useMediaQuery(q: string): boolean {
 
 let toastSeq = 0;
 
-// Islamic prayer times along the route: shown automatically when the trip has a mosque or
-// prayer stop, otherwise behind a toggle. The choice is remembered in this browser.
-const PRAYER_KEY = "sidequest.prayers";
-function loadPrayerPref(): "on" | "off" | null {
-  try {
-    const v = localStorage.getItem(PRAYER_KEY);
-    return v === "on" || v === "off" ? v : null;
-  } catch {
-    return null;
-  }
-}
-
 /** ?q=… from the landing page's "try it" chips */
 function initialPrompt(): string {
   try {
@@ -71,7 +59,6 @@ export default function Planner() {
   const [parsing, setParsing] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [cuisines, setCuisines] = useState<Cuisine[]>([]);
-  const [prayerPref, setPrayerPref] = useState(loadPrayerPref);
   const [plan, setPlan] = useState<TripPlan | null>(null);
   const [reward, setReward] = useState<Reward | null>(null);
   const [pinned, setPinned] = useState<Record<string, string>>({});
@@ -266,20 +253,6 @@ export default function Planner() {
     setDestText(originText);
   };
 
-  const prayerTrip = !!plan?.stops.some(
-    (s) => ["mosque", "prayer_room"].includes(s.request.category) || s.request.time_window.type === "prayer",
-  );
-  const showPrayers = prayerPref === "on" || (prayerPref !== "off" && prayerTrip);
-  const togglePrayers = () => {
-    const next = showPrayers ? "off" : "on";
-    setPrayerPref(next);
-    try {
-      localStorage.setItem(PRAYER_KEY, next);
-    } catch {
-      /* ignore */
-    }
-  };
-
   const transitUnavailable = health && health.routing.transit.length === 0;
   const modeInfo = MODES.find((m) => m.key === mode);
 
@@ -295,7 +268,6 @@ export default function Planner() {
           onSelectStop={setSelected}
           onPickCandidate={pin}
           padLeft={desktop ? 500 : 0}
-          showPrayers={showPrayers}
         />
         {busy && <PlanningOverlay />}
       </div>
@@ -471,8 +443,6 @@ export default function Planner() {
                 selectedStopId={selected}
                 onSelectStop={setSelected}
                 onSuggestMosque={suggestMosque}
-                showPrayers={showPrayers}
-                onTogglePrayers={togglePrayers}
                 renderDetail={(id) => {
                   const sp = plan.stops.find((s) => s.request.id === id);
                   return sp ? <StopDetail stop={sp} busy={busy} onUse={(osm) => pin(id, osm)} /> : null;
@@ -527,7 +497,7 @@ function DataNotes({ plan, health }: { plan: TripPlan; health: Health | null }) 
           certification.
         </li>
         <li>Many places have no opening hours in OSM, so “hours unknown” is common. Small prayer rooms and shrines are often unmapped.</li>
-        <li>Muslim prayer times (shown with a mosque stop, or via the toggle) use the MUIS method, computed at your starting point.</li>
+        <li>Muslim prayer times appear only when you ask for a mosque or surau; they use the MUIS method, computed at your starting point.</li>
         <li>Stars, XP and badges are just for fun and are stored in this browser only.</li>
       </ul>
     </details>

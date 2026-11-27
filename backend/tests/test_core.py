@@ -274,3 +274,33 @@ def test_cuisine_evidence():
     assert cuisine_evidence({}, [])[0] is True
     # any requested cuisine may match
     assert cuisine_evidence({"cuisine": "thai"}, ["italian", "thai"])[0] is True
+
+
+def test_before_a_clock_time_means_any_time_up_to_it():
+    # "church before 10am" on an 08:30–09:10 drive: the whole trip qualifies
+    dep = datetime(2026, 11, 29, 8, 30, tzinfo=TZ)
+    w = resolve_window(_stop(TimeWindow(type="clock_time", value="10:00", relation="before")), dep,
+                       dep + timedelta(minutes=40), _lookup)
+    assert w.start == dep and (w.end.hour, w.end.minute) == (10, 0)
+    # leaving at 09:50 it stays the usual slot before 10:00
+    late = dep.replace(hour=9, minute=50)
+    w = resolve_window(_stop(TimeWindow(type="clock_time", value="10:00", relation="before")), late,
+                       late + timedelta(minutes=40), _lookup)
+    assert w.start == late.replace(minute=20) and w.end.hour == 10
+    # "after 6pm" runs until arrival (at most 4 h)
+    eve = datetime(2026, 11, 29, 17, 30, tzinfo=TZ)
+    w = resolve_window(_stop(TimeWindow(type="clock_time", value="18:00", relation="after")), eve,
+                       eve + timedelta(hours=2), _lookup)
+    assert w.start.hour == 18 and w.end == eve + timedelta(hours=2)
+
+
+def test_clock_time_uses_the_occurrence_nearest_the_trip():
+    # "dinner" (19:00) on a 23:30 drive means tonight, not 19:00 tomorrow
+    dep = datetime(2026, 11, 28, 23, 30, tzinfo=TZ)
+    w = resolve_window(_stop(TimeWindow(type="clock_time", value="19:00", tolerance_min=60)), dep,
+                       dep + timedelta(minutes=30), _lookup)
+    assert w.target.date() == dep.date()
+    # "breakfast" (08:30) on the same drive is the next morning
+    w = resolve_window(_stop(TimeWindow(type="clock_time", value="08:30", tolerance_min=60)), dep,
+                       dep + timedelta(minutes=30), _lookup)
+    assert w.target.date() == (dep + timedelta(days=1)).date()

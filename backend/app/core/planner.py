@@ -35,6 +35,7 @@ EXACT_N_MATRIX = 8 # one matrix request covers more candidates for free
 COMBINE_SCAN = 15  # candidates examined for combinations
 HOURS_EVAL_N = 80  # opening hours evaluated for the best-N by detour
 MAX_STOPS = 8
+WIDEN_S = 20 * 60  # nothing inside a time window: also look this far either side
 
 
 def normalize_stop(s: StopRequest) -> StopRequest:
@@ -64,6 +65,15 @@ def normalize_stop(s: StopRequest) -> StopRequest:
     if s.constraints.cuisine and cat.kind not in T.CUISINE_KINDS:
         s.constraints.cuisine = []
     return s
+
+
+MUSLIM_PRAYER_CATEGORIES = ("mosque", "prayer_room")
+
+
+def wants_prayer_times(stops: list[StopRequest]) -> bool:
+    """Prayer times belong in the plan only when the user asked for a mosque or surau,
+    or timed a stop by a prayer ("at Asr"). Everyone else never sees them (D22)."""
+    return any(s.category in MUSLIM_PRAYER_CATEGORIES or s.time_window.type == "prayer" for s in stops)
 
 
 @dataclass
@@ -426,7 +436,7 @@ class Planner:
         for p, label in ((origin, "Origin"), (dest, "Destination")):
             a, b, c, d = self.region.bbox
             if not (a <= p.lat <= c and b <= p.lng <= d):
-                raise ProviderError(f"{label} is outside {self.region.name}")
+                raise ValueError(f"{label} is outside {self.region.name}")  # bad input → 422, not a provider error
         route = self.routing.route((origin.lat, origin.lng), (dest.lat, dest.lng), mode, depart)
         tl = Timeline(route, self.proj)
         stops = [normalize_stop(s) for s in req.stops[:MAX_STOPS]]
@@ -475,6 +485,16 @@ class Planner:
                 win = Window(clock.at(t0), clock.at(t1), None, win.prayer, win.warnings)
             wins[s.id] = win
             raws = self._raw_candidates(s, tl, t0, t1, mode)
+            if not raws and s.time_window.type != "any":
+                # e.g. Asr starts 2 min before arrival and no mosque is that close to the end:
+                # offer the nearest ones just outside the window. Arriving early means waiting
+                # (prayer) or an outside-window penalty — both are counted, nothing is hidden.
+                w0, w1 = max(0.0, t0 - WIDEN_S), min(tl.duration, t1 + WIDEN_S)
+                if (w0, w1) != (t0, t1):
+                    raws = self._raw_candidates(s, tl, w0, w1, mode)
+                    if raws:
+                        swarn.append("Nothing along the route inside the requested time — these are the closest "
+                                     "options just outside it")
             raws.sort(key=lambda r: r.detour)
             if raws and all(r.unverified for r in raws):
                 swarn.append(f"No {'/'.join(s.constraints.dietary)}-tagged {s.label.lower()} places along this part of "
@@ -644,7 +664,9 @@ class Planner:
         arrival = clock.at(max([tl.duration] + [rt for rt, _ in clock.events]) + 1.0) - timedelta(seconds=1.0)
         ordered_plans = [plans[s.id] for s in stops if s.id in plans]
 
-        prayers = self._prayers_on_route(req, tl, clock, depart, arrival, ordered_plans)
+        # Islamic prayer times only for trips that ask for a mosque / surau / prayer time (D22)
+        prayers = self._prayers_on_route(req, tl, clock, depart, arrival, ordered_plans) \
+            if wants_prayer_times(stops) else []
         total_added = round(sum(sp.added_min for sp in ordered_plans), 1)
 
         # Google Maps hand-off: chosen places in route order, deduped

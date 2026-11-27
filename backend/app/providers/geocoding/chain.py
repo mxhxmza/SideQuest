@@ -31,7 +31,7 @@ class LocalPoiGeocoding:
         return out
 
 
-RANKING_VERSION = 2
+RANKING_VERSION = 3
 
 
 class ChainGeocoding:
@@ -101,9 +101,18 @@ def _near_dup(r: GeocodeResult, seen: list[GeocodeResult], radius_deg: float = 0
 
 
 def rank_by_name(q: str, results: list[GeocodeResult]) -> list[GeocodeResult]:
-    """Promote exact name matches; otherwise keep the providers' own order.
+    """Promote exact name matches, then — for multi-word queries — names that start with
+    the query; otherwise keep the providers' own order.
 
-    Only *exact* matches move: a provider knows things a string match doesn't
-    (OneMap ranks "Nanyang Technological University" first for "NTU", which a
-    starts-with rule would bury under "NTU Innovation Centre" and "NTUC ...")."""
-    return sorted(results, key=lambda r: name_match_tier(q, r.name) != 3)
+    One-word queries only promote exact matches: a provider knows things a string match
+    doesn't (OneMap ranks "Nanyang Technological University" first for "NTU", which a
+    starts-with rule would bury under "NTU Innovation Centre" and "NTUC ..."). A multi-word
+    query is specific enough: "Punggol MRT" should be "Punggol MRT Station (NE17)", not
+    OneMap's first hit "Punggol Coast MRT Station"."""
+    multi = len(_norm(q).split()) >= 2
+
+    def key(r: GeocodeResult) -> tuple[bool, bool]:
+        tier = name_match_tier(q, r.name)
+        return tier != 3, not (multi and tier == 2)
+
+    return sorted(results, key=key)
