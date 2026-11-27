@@ -292,7 +292,14 @@ export default function MapView({
           { padding, maxZoom: 15, duration: reducedMotion() ? 0 : 1100 },
         );
       } else if (pts.length === 1) {
-        m.flyTo({ center: pts[0], zoom: 13, padding, duration: reducedMotion() ? 0 : 1100 });
+        // `offset`, not `padding`: padding on flyTo/easeTo sticks to the map, and the next
+        // fitBounds adds its own padding on top — the route then fits into a ~40 px strip
+        m.flyTo({
+          center: pts[0],
+          zoom: 13,
+          offset: [(padding.left - padding.right) / 2, (padding.top - padding.bottom) / 2],
+          duration: reducedMotion() ? 0 : 1100,
+        });
       }
     };
     if (ready.current) draw();
@@ -341,7 +348,8 @@ export default function MapView({
       wrap.appendChild(node);
       candMarkers.current.push(new maplibregl.Marker({ element: wrap }).setLngLat([c.lng, c.lat]).setPopup(popup).addTo(m));
     });
-    if (sp.chosen) m.easeTo({ center: [sp.chosen.lng, sp.chosen.lat], padding: { left: padLeft, top: 0, right: 0, bottom: 0 }, duration: 700 });
+    // offset, not padding (see the fit above)
+    if (sp.chosen) m.easeTo({ center: [sp.chosen.lng, sp.chosen.lat], offset: [padLeft / 2, 0], duration: 700 });
   }, [plan, selectedStopId, onPickCandidate, padLeft]);
 
   return <div ref={box} className="h-full w-full" role="region" aria-label="Map" />;
