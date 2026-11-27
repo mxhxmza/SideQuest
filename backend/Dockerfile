@@ -2,6 +2,10 @@
 # Stage 1 builds the POI DB from OSM (D2) so the image works on an ephemeral disk (D1).
 FROM python:3.11-slim AS poi
 WORKDIR /src
+# The osmium wheel links the system libexpat.so.1, which python:*-slim no longer ships.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libexpat1 \
+ && rm -rf /var/lib/apt/lists/*
 COPY backend/requirements.txt backend/requirements-import.txt backend/
 RUN pip install --no-cache-dir -r backend/requirements-import.txt
 COPY backend/app backend/app
